@@ -1,0 +1,48 @@
+package xxml
+
+import (
+	"reflect"
+	"strconv"
+)
+
+var (
+	mapKeyMarshalType = reflect.TypeOf((*MapKeyMarshaler)(nil)).Elem()
+)
+
+func marshalMap(writer *Writer, rval *reflect.Value, opts *Options) (err error) {
+	keys := rval.MapKeys()
+	var kstr string
+	var vstr string
+	for i := range keys {
+		rkv := keys[i]
+		switch rkv.Type().Kind() {
+		case reflect.String:
+			kstr = rkv.String()
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			kstr = strconv.FormatInt(rkv.Int(), 10)
+		case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8:
+			kstr = strconv.FormatUint(rkv.Uint(), 10)
+		default:
+			if rkv.Type().Implements(mapKeyMarshalType) {
+				kstr = rkv.Interface().(MapKeyMarshaler).MarshalKey()
+			}
+			if rkv.Type().Kind() == reflect.Ptr && reflect.PtrTo(rkv.Type()).Implements(mapKeyMarshalType) {
+				kstr = rkv.Interface().(MapKeyMarshaler).MarshalKey()
+			}
+			if kstr == "" {
+				err = errorUnsupportType(rkv.Type().Name())
+				return
+			}
+		}
+		rval := rval.MapIndex(rkv)
+
+		err = marshal(writer, rval, opts)
+		if err != nil {
+			return
+		}
+		writer.WriteStart(kstr)
+		writer.WriteValue(vstr)
+		writer.WriteEnd()
+	}
+	return
+}
