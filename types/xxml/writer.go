@@ -34,6 +34,7 @@ func NewWriter(compress bool) *Writer {
 //WriteStart WriteStart
 func (w *Writer) WriteStart(ele string) *Writer {
 	w.writetab()
+	ele = escapeChars(ele)
 	w.buffer.WriteString(fmt.Sprintf("<%s>", ele))
 	w.eleStack.Push(ele)
 	w.lastwriteType = writeTypeStart
@@ -57,6 +58,7 @@ func (w *Writer) WriteEnd() *Writer {
 
 //WriteValue WriteValue
 func (w *Writer) WriteValue(val string) *Writer {
+	val = escapeChars(val)
 	w.buffer.WriteString(val)
 	w.lastwriteType = writeTypeVal
 	return w

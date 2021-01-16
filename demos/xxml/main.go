@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/micro-plat/lib4go/file"
 	"github.com/zhiyunliu/golibs/types/xxml"
@@ -25,6 +26,7 @@ type DemoStruct struct {
 	F10 []Val
 	F11 []*Val
 	F12 IntArray
+	F13 *time.Time
 }
 type XMap map[string]interface{}
 
@@ -56,6 +58,7 @@ func main() {
 				},
 		*/
 		"f": IntArray{{K: "1", V: "2"}, {K: "3", V: "4"}},
+		"g": time.Now(),
 	}
 	val, err := xxml.Marshal(m, xxml.WithUncompress(), xxml.WithCustomType(&IntArray{}))
 	f, err := file.CreateFile("xx")

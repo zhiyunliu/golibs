@@ -4,10 +4,12 @@ import (
 	"encoding/xml"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 var (
 	custommarshalerType = reflect.TypeOf((*Customize)(nil)).Elem()
+	timemarshalerType   = reflect.TypeOf((*time.Time)(nil)).Elem()
 )
 
 //Marshal Marshal
@@ -24,10 +26,6 @@ func Marshal(obj interface{}, opts ...Option) (val string, err error) {
 	refVal := reflect.ValueOf(obj)
 
 	writer.WriteStart(rootEle)
-	if refVal.IsZero() {
-		writer.WriteEnd()
-		return writer.String(), nil
-	}
 
 	err = marshal(writer, refVal, &newOpts)
 	if err != nil {
@@ -39,7 +37,9 @@ func Marshal(obj interface{}, opts ...Option) (val string, err error) {
 }
 
 func marshal(writer *Writer, refVal reflect.Value, opts *Options) (err error) {
-
+	if refVal.IsZero() {
+		return nil
+	}
 	if refVal.Kind() == reflect.Interface {
 		refVal = reflect.ValueOf(refVal.Interface())
 	}
@@ -69,6 +69,7 @@ func marshal(writer *Writer, refVal reflect.Value, opts *Options) (err error) {
 	case reflect.Array, reflect.Slice:
 		return marshalArray(writer, refVal, opts)
 	case reflect.Struct:
+
 		return marshalStruct(writer, refVal, opts)
 	}
 

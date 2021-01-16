@@ -16,6 +16,10 @@ func marshalStruct(writer *Writer, rval reflect.Value, opts *Options) (err error
 		rtype = rval.Type()
 	}
 
+	if rval.Type() == timemarshalerType {
+		return marshalTime(writer, rval, opts)
+	}
+
 	fieldCount := rtype.NumField()
 	for i := 0; i < fieldCount; i++ {
 		fv := rtype.Field(i)

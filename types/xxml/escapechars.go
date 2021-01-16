@@ -31,6 +31,14 @@ var escapechars = [][2][]byte{
 	{[]byte(`'`), []byte(`&apos;`)},
 }
 
+var unescapechars = [][2][]byte{
+	{[]byte(`&amp;`), []byte(`&`)},
+	{[]byte(`&lt;`), []byte(`<`)},
+	{[]byte(`&gt;`), []byte(`>`)},
+	{[]byte(`&quot;`), []byte(`"`)},
+	{[]byte(`&apos;`), []byte(`'`)},
+}
+
 func escapeChars(s string) string {
 	if len(s) == 0 {
 		return s
@@ -38,6 +46,21 @@ func escapeChars(s string) string {
 
 	b := []byte(s)
 	for _, v := range escapechars {
+		n := bytes.Count(b, v[0])
+		if n == 0 {
+			continue
+		}
+		b = bytes.Replace(b, v[0], v[1], n)
+	}
+	return string(b)
+}
+
+func unescapeChars(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	b := []byte(s)
+	for _, v := range unescapechars {
 		n := bytes.Count(b, v[0])
 		if n == 0 {
 			continue
