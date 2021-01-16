@@ -9,10 +9,9 @@ var (
 	mapKeyMarshalType = reflect.TypeOf((*MapKeyMarshaler)(nil)).Elem()
 )
 
-func marshalMap(writer *Writer, rval *reflect.Value, opts *Options) (err error) {
+func marshalMap(writer *Writer, rval reflect.Value, opts *Options) (err error) {
 	keys := rval.MapKeys()
 	var kstr string
-	var vstr string
 	for i := range keys {
 		rkv := keys[i]
 		switch rkv.Type().Kind() {
@@ -35,13 +34,15 @@ func marshalMap(writer *Writer, rval *reflect.Value, opts *Options) (err error) 
 			}
 		}
 		rval := rval.MapIndex(rkv)
+		if rval.IsZero() {
+			continue
+		}
+		writer.WriteStart(kstr)
 
 		err = marshal(writer, rval, opts)
 		if err != nil {
 			return
 		}
-		writer.WriteStart(kstr)
-		writer.WriteValue(vstr)
 		writer.WriteEnd()
 	}
 	return
