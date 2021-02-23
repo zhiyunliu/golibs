@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/micro-plat/lib4go/file"
 	"github.com/zhiyunliu/golibs/types/xxml"
 )
 
@@ -61,7 +61,7 @@ func main() {
 		"g": time.Now(),
 	}
 	val, err := xxml.Marshal(m, xxml.WithUncompress(), xxml.WithCustomType(&IntArray{}))
-	f, err := file.CreateFile("xx")
+	f, err := os.Create("xx")
 	fmt.Fprintln(f, val)
 	fmt.Fprintln(f, err)
 
