@@ -93,13 +93,7 @@ func (m *PathMatch) Match(path string, spl ...string) (match bool, pattern strin
 
 func (m *PathMatch) getRegexp(u string, idx int, sep string) string {
 	if m.regexpAll[idx] == "" {
-		nv := u
-		nv = strings.ReplaceAll(nv, ".", `\.`)
-		nv = strings.ReplaceAll(nv, "+", `\+`)
-		nv = strings.ReplaceAll(nv, "$", `\$`)
-		nv = strings.ReplaceAll(nv, "^", `\^`)
-
-		parties := strings.Split(nv, sep)
+		parties := strings.Split(u, sep)
 		npts := make([]string, len(parties))
 		for i := range parties {
 			if parties[i] == "" {
@@ -107,11 +101,21 @@ func (m *PathMatch) getRegexp(u string, idx int, sep string) string {
 			}
 			pv, ok := tsmp[sep+parties[i]]
 			if !ok {
-				pv = sep + strings.ReplaceAll(parties[i], "*", tsmp["*"])
+				nv := m.processSpecial(parties[i])
+				sep = m.processSpecial(sep)
+				pv = sep + strings.ReplaceAll(nv, "*", tsmp["*"])
 			}
 			npts[i] = pv
 		}
 		m.regexpAll[idx] = "^(" + strings.Join(npts, "") + ")$"
 	}
 	return m.regexpAll[idx]
+}
+
+func (m *PathMatch) processSpecial(nv string) string {
+	nv = strings.ReplaceAll(nv, ".", `\.`)
+	nv = strings.ReplaceAll(nv, "+", `\+`)
+	nv = strings.ReplaceAll(nv, "$", `\$`)
+	nv = strings.ReplaceAll(nv, "^", `\^`)
+	return nv
 }
