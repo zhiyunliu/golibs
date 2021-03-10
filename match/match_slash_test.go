@@ -1,10 +1,10 @@
-package pathmatch
+package match
 
 import (
 	"testing"
 )
 
-func TestPathMatch_Match(t *testing.T) {
+func TestPathMatch_slash_Match(t *testing.T) {
 
 	// paths := []string{
 	// 	"/a", "/a/b", "/a/b/c",
@@ -32,6 +32,8 @@ func TestPathMatch_Match(t *testing.T) {
 		{name: "1.1. 常规匹配", args: args{reg: "/a", path: "/a", spl: "/"}, want: want{match: true}},
 		{name: "1.2. 常规匹配", args: args{reg: "/a/b", path: "/a/b", spl: "/"}, want: want{match: true}},
 		{name: "1.3. 常规匹配", args: args{reg: "/a/b/c", path: "/a/b/c", spl: "/"}, want: want{match: true}},
+
+		{name: "2.1. ./**", args: args{reg: "./**", path: "./aa", spl: "/"}, want: want{match: true}},
 
 		{name: "2.1. /**", args: args{reg: "/**", path: "/aa", spl: "/"}, want: want{match: true}},
 		{name: "2.1. /**", args: args{reg: "/**", path: "/aa/bb", spl: "/"}, want: want{match: true}},
