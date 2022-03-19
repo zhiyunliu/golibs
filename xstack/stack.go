@@ -1,10 +1,12 @@
-package xlog
+package xstack
 
 import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
 	"runtime"
+
+	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
 var (
@@ -15,8 +17,8 @@ var (
 )
 
 //getStack 获取当前stack信息
-func getStack() string {
-	return string(stack(5))
+func GetStack(skip int) string {
+	return bytesconv.BytesToString(stack(skip))
 }
 
 // stack returns a nicely formatted stack frame, skipping skip frames.

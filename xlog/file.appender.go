@@ -1,67 +1,93 @@
 package xlog
 
 import (
+	"fmt"
+	"sync"
 	"time"
 
-	"github.com/micro-plat/lib4go/concurrent/cmap"
+	cmap "github.com/orcaman/concurrent-map"
 )
+
+const File string = "file"
 
 //FileAppender 文件FileAppender
 type FileAppender struct {
-	writers    cmap.ConcurrentMap
-	ticker     *time.Ticker
-	closNotify chan struct{}
-	done       chan struct{}
+	writers       cmap.ConcurrentMap
+	cleanTicker   *time.Ticker
+	cleanInterval uint
+	closeChan     chan struct{}
+	onceLock      sync.Once
 }
 
 //NewFileAppender 构建file FileAppender
 func NewFileAppender() *FileAppender {
 	a := &FileAppender{
-		done:    make(chan struct{}),
-		writers: cmap.New(6),
-		ticker:  time.NewTicker(time.Minute * 10),
+		closeChan:     make(chan struct{}),
+		writers:       cmap.New(),
+		cleanInterval: 60 * 10,
 	}
+	a.cleanTicker = time.NewTicker(time.Second * time.Duration(a.cleanInterval))
 	go a.clean()
 	return a
 }
-func (a *FileAppender) Write(layout *Layout, event *LogEvent) error {
-	p := event.Transform(layout.Path)
-	_, w, err := a.writers.SetIfAbsentCb(p, func(input ...interface{}) (interface{}, error) {
-		return newWriter(p, layout)
+
+func (a *FileAppender) Name() string {
+	return File
+}
+
+func (a *FileAppender) Write(layout *Layout, event *Event) error {
+	filePath := event.Transform(layout.Path, false)
+	res := a.writers.Upsert(filePath, nil, func(exists bool, oldval, newval interface{}) interface{} {
+		if exists {
+			return oldval
+		}
+		writer, err := newFileWriter(filePath, layout)
+		if err != nil {
+			err = fmt.Errorf("创建FileWriter.Path=%s.Error:%+v", filePath, err)
+			panic(err)
+		}
+		return writer
+
 	})
-	if err != nil {
-		return err
-	}
-	w.(*writer).Write(event)
+	event = event.Format(layout)
+	res.(*fileWriter).Write(event)
 	return nil
 }
+
+//Close 关闭组件
+func (a *FileAppender) Close() error {
+	a.onceLock.Do(func() {
+		close(a.closeChan)
+		a.cleanWriters()
+	})
+
+	return nil
+}
+
 func (a *FileAppender) clean() {
 	for {
 		select {
-		case <-a.done:
+		case <-a.closeChan:
 			return
-		case <-a.ticker.C:
-			a.writers.RemoveIterCb(func(key string, value interface{}) bool {
-				w := value.(*writer)
-				if time.Since(w.lastWrite) < 5*time.Minute {
-					w.Write(GetEndWriteEvent()) //向日志发送结速写入事件
-					w.Close()                   //等待所有日志被写入文件
-					return true
-				}
-				return false
-			})
+		case <-a.cleanTicker.C:
+			a.cleanWriters()
 		}
 	}
 
 }
 
-//Close 关闭组件
-func (a *FileAppender) Close() error {
-	close(a.done)
-	a.writers.RemoveIterCb(func(key string, w interface{}) bool {
-		w.(*writer).Write(GetEndWriteEvent())
-		w.(*writer).Close()
-		return true
-	})
-	return nil
+func (a *FileAppender) cleanWriters() {
+	for item := range a.writers.IterBuffered() {
+		a.writers.RemoveCb(item.Key, func(key string, value interface{}, exists bool) bool {
+			if !exists {
+				return exists
+			}
+			w := value.(*fileWriter)
+			if time.Since(w.lastWrite) < 5*time.Minute {
+				w.Close()
+				return true
+			}
+			return false
+		})
+	}
 }

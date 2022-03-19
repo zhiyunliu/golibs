@@ -1,17 +1,20 @@
 package xlog
 
 import (
-	"bufio"
+	"bytes"
+	"fmt"
 	"io"
+	"os"
 	"sync"
 	"time"
 
-	"github.com/zhiyunliu/golibs/xfile"
+	"github.com/zhiyunliu/golibs/xlog/log"
 )
 
-//writer 文件输出器
-type fileWriter struct {
-	writer     *bufio.Writer
+//stdWriter 控制台输出器
+type stdWriter struct {
+	writer     *bytes.Buffer
+	output     *log.Logger
 	lastWrite  time.Time
 	layout     *Layout
 	interval   time.Duration
@@ -26,26 +29,26 @@ type fileWriter struct {
 }
 
 //newwriter 构建基于文件流的日志输出对象,使用带缓冲区的文件写入，缓存区达到4K或每隔3秒写入一次文件。
-func newFileWriter(path string, layout *Layout) (fa *fileWriter, err error) {
-	fa = &fileWriter{
+func newStdWriter(layout *Layout) (fa *stdWriter, err error) {
+	fa = &stdWriter{
 		layout:    layout,
 		interval:  time.Second * 3,
 		countChan: make(chan struct{}, 100),
 		closeChan: make(chan struct{}),
 	}
-	fa.file, err = xfile.CreateFile(path)
-	if err != nil {
-		return
-	}
+	fa.writer = bytes.NewBufferString("")
 	fa.Level = layout.Level
 	fa.ticker = time.NewTicker(fa.interval)
-	fa.writer = bufio.NewWriterSize(fa.file, 4096)
+
+	fa.output = log.New(fa.writer, "", log.Llongcolor)
+	fa.output.SetOutputLevel(log.Ldebug)
+
 	go fa.timeFlush()
 	return
 }
 
 //Write 写入日志
-func (f *fileWriter) Write(event *Event) {
+func (f *stdWriter) Write(event *Event) {
 	if f.Level > event.Level {
 		return
 	}
@@ -55,12 +58,24 @@ func (f *fileWriter) Write(event *Event) {
 		f.countChan <- struct{}{}
 		f.writeCount = 0
 	}
-	f.writer.WriteString(event.Output)
+
+	switch event.Level {
+	case LevelDebug:
+		f.output.Debug(event.Output)
+	case LevelInfo:
+		f.output.Info(event.Output)
+	case LevelWarn:
+		f.output.Warn(event.Output)
+	case LevelError:
+		f.output.Error(event.Output)
+	case LevelFatal:
+		f.output.Output("", log.Lfatal, 1, fmt.Sprintln(event.Output))
+	}
 	f.lastWrite = time.Now()
 }
 
 //Close 关闭当前appender
-func (f *fileWriter) Close() {
+func (f *stdWriter) Close() {
 	f.onceLock.Do(func() {
 		close(f.closeChan)
 		f.ticker.Stop()
@@ -68,7 +83,7 @@ func (f *fileWriter) Close() {
 }
 
 //writeTo 定时写入文件
-func (f *fileWriter) timeFlush() {
+func (f *stdWriter) timeFlush() {
 	for {
 		select {
 		case <-f.closeChan:
@@ -81,10 +96,9 @@ func (f *fileWriter) timeFlush() {
 		}
 	}
 }
-func (f *fileWriter) flush() {
+func (f *stdWriter) flush() {
 	f.lock.Lock()
-	if err := f.writer.Flush(); err != nil {
-		sysLogger.Error("file.write.err:", err)
-	}
+	f.writer.WriteTo(os.Stdout)
+	f.writer.Reset()
 	f.lock.Unlock()
 }
