@@ -18,9 +18,9 @@ func newSysLogger() *defaultLogger {
 }
 func (s *defaultLogger) Error(content ...interface{}) {
 	evt := NewEvent("sys", LevelError, CreateSession(), fmt.Sprint(content...), nil)
-	s.appender.Write(nil, evt)
+	s.appender.Write(s.layout, evt)
 }
 func (s *defaultLogger) Errorf(f string, content ...interface{}) {
 	evt := NewEvent("sys", LevelError, CreateSession(), fmt.Sprintf(f, content...), nil)
-	s.appender.Write(nil, evt)
+	s.appender.Write(s.layout, evt)
 }

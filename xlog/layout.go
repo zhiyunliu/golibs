@@ -23,7 +23,7 @@ func (l *Layout) Init() {
 }
 
 type layoutSetting struct {
-	Status  bool      `json:""`
+	Status  bool      `json:"status"`
 	Layouts []*Layout `json:"layouts" toml:"layouts"`
 }
 
@@ -32,7 +32,7 @@ func newDefLayouts() *layoutSetting {
 	defaultLayout := "[%datetime.%ms][%l][%session][%data] %content%n"
 
 	fileLayout := &Layout{Type: File, LevelName: LevelAll.Name()}
-	fileLayout.Path, _ = xfile.GetAbs("../logs/%app/%date/%hh.log")
+	fileLayout.Path = "../logs/%app/%date/%hh.log"
 	fileLayout.Layout = defaultLayout
 	fileLayout.Init()
 	setting.Layouts = append(setting.Layouts, fileLayout)

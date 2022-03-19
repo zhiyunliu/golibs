@@ -20,7 +20,7 @@ func Resume() {
 
 var once sync.Once
 
-var LogPath = "../conf/logger.conf"
+var LogPath = "../conf/logger.json"
 
 func init() {
 	once.Do(func() {
@@ -37,6 +37,7 @@ func init() {
 			sysLogger.Errorf("读取配置文件失败 %v", err)
 			return
 		}
+		globalPause = !layouts.Status
 		AddLayout(layouts.Layouts...)
 	})
 }

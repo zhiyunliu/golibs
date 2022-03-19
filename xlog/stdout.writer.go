@@ -3,7 +3,6 @@ package xlog
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"sync"
 	"time"
@@ -18,7 +17,6 @@ type stdWriter struct {
 	lastWrite  time.Time
 	layout     *Layout
 	interval   time.Duration
-	file       io.WriteCloser
 	ticker     *time.Ticker
 	lock       sync.Mutex
 	onceLock   sync.Once
