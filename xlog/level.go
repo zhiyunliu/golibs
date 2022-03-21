@@ -3,13 +3,13 @@ package xlog
 type Level int8
 
 const (
-	LevelAll   Level = -1
+	LevelAll   Level = 0
 	LevelDebug Level = 1
 	LevelInfo  Level = 2
 	LevelWarn  Level = 3
 	LevelError Level = 4
 	LevelFatal Level = 5
-	LevelOff   Level = 99
+	LevelOff   Level = 9
 )
 
 var nameMap = map[Level]string{}
@@ -23,6 +23,14 @@ func init() {
 	nameMap[LevelFatal] = "f"
 	nameMap[LevelAll] = "a"
 	nameMap[LevelOff] = "o"
+
+	nameMap[100+LevelDebug] = "debug"
+	nameMap[100+LevelInfo] = "info"
+	nameMap[100+LevelWarn] = "warn"
+	nameMap[100+LevelError] = "error"
+	nameMap[100+LevelFatal] = "fatal"
+	nameMap[100+LevelAll] = "all"
+	nameMap[100+LevelOff] = "off"
 
 	levelMap["d"] = LevelDebug
 	levelMap["i"] = LevelInfo
@@ -44,6 +52,9 @@ func init() {
 
 func (l Level) Name() string {
 	return nameMap[l]
+}
+func (l Level) FullName() string {
+	return nameMap[100+l]
 }
 
 func TransLevel(n string) Level {

@@ -1,6 +1,8 @@
-package xlog
+package session
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestCreateSession(t *testing.T) {
 	tests := []struct {
@@ -11,7 +13,7 @@ func TestCreateSession(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CreateSession(); got != tt.want {
+			if got := Create(); got != tt.want {
 				t.Errorf("CreateSession() = %v, want %v", got, tt.want)
 			}
 		})

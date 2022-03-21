@@ -9,22 +9,22 @@ import (
 
 //Logger 日志对象
 type LoggerWrap struct {
-	name        string
-	sessions    string
-	defaultData map[string]string
-	isPause     bool
+	opts    *options
+	isPause bool
 }
 
-var loggerEventChan chan *Event
-var loggerPool *sync.Pool
-var closeChan chan struct{}
-var onceLock sync.Once
-var hasClosed = false
+var (
+	loggerEventChan chan *Event
+	loggerPool      *sync.Pool
+	closeChan       chan struct{}
+	onceLock        sync.Once
+	hasClosed       = false
+)
 
 func init() {
 	loggerPool = &sync.Pool{
 		New: func() interface{} {
-			return New("")
+			return New()
 		},
 	}
 	closeChan = make(chan struct{})
@@ -34,29 +34,26 @@ func init() {
 }
 
 //New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
-func New(name string, opt ...Option) (logger Logger) {
+func New(opt ...Option) (logger Logger) {
 	wrapper := &LoggerWrap{}
-	wrapper.name = name
 	opts := &options{
-		Data: map[string]string{},
+		data: map[string]string{},
 	}
 	for i := range opt {
 		opt[i](opts)
 	}
-	if opts.Sid == "" {
-		wrapper.sessions = CreateSession()
-	}
-	wrapper.defaultData = opts.Data
-	return logger
+	wrapper.opts = opts
+	return wrapper
 }
 
 //Name 名字
 func (logger *LoggerWrap) Name() string {
-	return logger.name
+	return logger.opts.name
 }
 
 //Close 关闭当前日志组件
 func (logger *LoggerWrap) Close() {
+	logger.opts.reset()
 	loggerPool.Put(logger)
 }
 
@@ -72,74 +69,74 @@ func (logger *LoggerWrap) Resume() {
 
 //GetSessionID 获取当前日志的session id
 func (logger *LoggerWrap) GetSessionID() string {
-	return logger.sessions
+	return logger.opts.sid
 }
 
 //Debug 输出debug日志
-func (logger *LoggerWrap) Debug(content ...interface{}) {
+func (logger *LoggerWrap) Debug(args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Log(LevelDebug, content...)
+	logger.Log(LevelDebug, args...)
 }
 
 //Debugf 输出debug日志
-func (logger *LoggerWrap) Debugf(format string, content ...interface{}) {
+func (logger *LoggerWrap) Debugf(format string, args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Logf(format, LevelDebug, content...)
+	logger.Logf(LevelDebug, format, args...)
 }
 
 //Info 输出info日志
-func (logger *LoggerWrap) Info(content ...interface{}) {
+func (logger *LoggerWrap) Info(args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Log(LevelInfo, content...)
+	logger.Log(LevelInfo, args...)
 }
 
 //Infof 输出info日志
-func (logger *LoggerWrap) Infof(format string, content ...interface{}) {
+func (logger *LoggerWrap) Infof(format string, args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Logf(format, LevelInfo, content...)
+	logger.Logf(LevelInfo, format, args...)
 }
 
 //Warn 输出info日志
-func (logger *LoggerWrap) Warn(content ...interface{}) {
+func (logger *LoggerWrap) Warn(args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Log(LevelWarn, content...)
+	logger.Log(LevelWarn, args...)
 }
 
 //Warnf 输出info日志
-func (logger *LoggerWrap) Warnf(format string, content ...interface{}) {
+func (logger *LoggerWrap) Warnf(format string, args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Logf(format, LevelWarn, content...)
+	logger.Logf(LevelWarn, format, args...)
 }
 
 //Error 输出Error日志
-func (logger *LoggerWrap) Error(content ...interface{}) {
+func (logger *LoggerWrap) Error(args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Log(LevelError, content...)
+	logger.Log(LevelError, args...)
 }
 
 //Errorf 输出Errorf日志
-func (logger *LoggerWrap) Errorf(format string, content ...interface{}) {
+func (logger *LoggerWrap) Errorf(format string, args ...interface{}) {
 	if logger.isPause || globalPause {
 		return
 	}
-	logger.Logf(format, LevelError, content...)
+	logger.Logf(LevelError, format, args...)
 }
 
-func (logger *LoggerWrap) Logf(format string, level Level, content ...interface{}) {
+func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
 			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
@@ -148,10 +145,10 @@ func (logger *LoggerWrap) Logf(format string, level Level, content ...interface{
 	if hasClosed {
 		return
 	}
-	event := NewEvent(logger.name, level, logger.sessions, fmt.Sprintf(format, content...), logger.defaultData)
+	event := NewEvent(logger.opts.name, level, logger.opts.sid, fmt.Sprintf(format, args...), logger.opts.data)
 	loggerEventChan <- event
 }
-func (logger *LoggerWrap) Log(level Level, content ...interface{}) {
+func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
 			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
@@ -160,7 +157,7 @@ func (logger *LoggerWrap) Log(level Level, content ...interface{}) {
 	if hasClosed {
 		return
 	}
-	event := NewEvent(logger.name, level, logger.sessions, getString(content...), logger.defaultData)
+	event := NewEvent(logger.opts.name, level, logger.opts.sid, getString(args...), logger.opts.data)
 	loggerEventChan <- event
 }
 
@@ -183,6 +180,14 @@ func getString(c ...interface{}) string {
 		}
 	}
 	return buf.String()
+}
+
+func GetLogger(opts ...Option) Logger {
+	log := loggerPool.Get().(*LoggerWrap)
+	for i := range opts {
+		opts[i](log.opts)
+	}
+	return log
 }
 
 //Close 关闭所有日志组件

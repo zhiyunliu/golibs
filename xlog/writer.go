@@ -1,6 +1,9 @@
 package xlog
 
-import "github.com/zhiyunliu/golibs/xstack"
+import (
+	"github.com/zhiyunliu/golibs/xfile"
+	"github.com/zhiyunliu/golibs/xstack"
+)
 
 const StackSkip = 5
 
@@ -32,8 +35,29 @@ func asyncWrite(event *Event) {
 	mainWriter.Log(event)
 }
 
+func loadLayout(path string) {
+	if !xfile.Exists(path) {
+		err := Encode(path)
+		if err != nil {
+			sysLogger.Errorf("创建日志配置文件失败 %v", err)
+			return
+		}
+	}
+
+	layouts, err := Decode(path)
+	if err != nil {
+		sysLogger.Errorf("读取配置文件失败 %v", err)
+		return
+	}
+	globalPause = !layouts.Status
+	AddLayout(layouts.Layouts...)
+}
+
+var LogPath = "../conf/logger.json"
+
 //进行日志配置文件初始化
 func init() {
 	AddAppender(NewFileAppender())
 	AddAppender(NewStudoutAppender())
+	loadLayout(LogPath)
 }

@@ -4,6 +4,8 @@ package xlog
 type Logger interface {
 	Name() string
 
-	Log(level Level, content ...interface{})
-	Logf(level Level, format string, content ...interface{})
+	Log(level Level, args ...interface{})
+	Logf(level Level, format string, args ...interface{})
+
+	Close()
 }

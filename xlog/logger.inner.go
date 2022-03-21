@@ -1,6 +1,10 @@
 package xlog
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/zhiyunliu/golibs/session"
+)
 
 //sysLogger 系统日志
 var sysLogger = newSysLogger()
@@ -17,10 +21,10 @@ func newSysLogger() *defaultLogger {
 	}
 }
 func (s *defaultLogger) Error(content ...interface{}) {
-	evt := NewEvent("sys", LevelError, CreateSession(), fmt.Sprint(content...), nil)
+	evt := NewEvent("sys", LevelError, session.Create(), fmt.Sprint(content...), nil)
 	s.appender.Write(s.layout, evt)
 }
 func (s *defaultLogger) Errorf(f string, content ...interface{}) {
-	evt := NewEvent("sys", LevelError, CreateSession(), fmt.Sprintf(f, content...), nil)
+	evt := NewEvent("sys", LevelError, session.Create(), fmt.Sprintf(f, content...), nil)
 	s.appender.Write(s.layout, evt)
 }

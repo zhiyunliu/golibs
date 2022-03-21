@@ -1,4 +1,4 @@
-package xlog
+package session
 
 import (
 	"encoding/hex"
@@ -7,8 +7,8 @@ import (
 	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
-//CreateSession create logger session
-func CreateSession() string {
+//Create create logger session
+func Create() string {
 	var buf [32]byte
 	uval := uuid.New()
 	hex.Encode(buf[:], uval[:])

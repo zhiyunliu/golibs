@@ -3,6 +3,7 @@ package xlog
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/zhiyunliu/golibs/xfile"
 )
@@ -29,15 +30,17 @@ type layoutSetting struct {
 
 func newDefLayouts() *layoutSetting {
 	setting := &layoutSetting{Layouts: make([]*Layout, 0, 2)}
-	defaultLayout := "[%datetime.%ms][%l][%session][%data] %content%n"
+	defaultLayout := "[%datetime][%l][%session] %content%n"
 
 	fileLayout := &Layout{Type: File, LevelName: LevelAll.Name()}
-	fileLayout.Path = "../logs/%app/%date/%hh.log"
+	fileLayout.Path = "../logs/%date/%level/%hh.log"
+	fileLayout.LevelName = fileLayout.Level.Name()
 	fileLayout.Layout = defaultLayout
 	fileLayout.Init()
 	setting.Layouts = append(setting.Layouts, fileLayout)
 
 	stdLayout := &Layout{Type: Stdout, LevelName: LevelAll.Name()}
+	stdLayout.LevelName = stdLayout.Level.Name()
 	stdLayout.Layout = defaultLayout
 	stdLayout.Init()
 	setting.Layouts = append(setting.Layouts, stdLayout)
@@ -63,13 +66,10 @@ func Encode(path string) error {
 //Decode 从配置文件中读取配置信息
 func Decode(path string) (*layoutSetting, error) {
 	l := &layoutSetting{}
-	f, err := xfile.ReadFile(path)
+	fileBytes, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("无法读取文件:%s %w", path, err)
-	}
-	decoder := json.NewDecoder(f)
-	if err := decoder.Decode(l); err != nil {
 		return nil, err
 	}
-	return l, nil
+	err = json.Unmarshal(fileBytes, l)
+	return l, err
 }

@@ -73,7 +73,7 @@ func (e *Event) Transform(template string, isJson bool) string {
 		case "date":
 			return e.LogTime.Format("20060102")
 		case "datetime":
-			return e.LogTime.Format("20060102150405.000")
+			return e.LogTime.Format("2006-01-02 15:04:05.000000")
 		case "yy":
 			return e.LogTime.Format("06")
 		case "mm":
@@ -89,6 +89,8 @@ func (e *Event) Transform(template string, isJson bool) string {
 		case "ms":
 			return fmt.Sprintf("%06d", e.LogTime.Nanosecond()/1e3)
 		case "level":
+			return e.Level.FullName()
+		case "l":
 			return e.Level.Name()
 		case "pid":
 			return fmt.Sprintf("%d", curPid)
