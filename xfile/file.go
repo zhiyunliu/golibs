@@ -16,7 +16,7 @@ func CreateFile(path string) (f *os.File, err error) {
 	if err != nil {
 		return
 	}
-	return os.Create(absPath)
+	return os.OpenFile(absPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 }
 
 //ReadFile 根据文件路径(相对或绝对路径)创建文件，如果文件所在的文件夹不存在则自动创建
