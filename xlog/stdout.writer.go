@@ -75,6 +75,7 @@ func (f *stdWriter) Write(event *Event) {
 //Close 关闭当前appender
 func (f *stdWriter) Close() {
 	f.onceLock.Do(func() {
+		f.flush()
 		close(f.closeChan)
 		f.ticker.Stop()
 	})
@@ -85,7 +86,6 @@ func (f *stdWriter) timeFlush() {
 	for {
 		select {
 		case <-f.closeChan:
-			f.flush()
 			return
 		case <-f.ticker.C:
 			f.flush()

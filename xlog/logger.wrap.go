@@ -176,6 +176,7 @@ func loopWriteEvent() {
 	}
 	close(closeChan)
 }
+
 func getString(c ...interface{}) string {
 	if len(c) == 1 {
 		return fmt.Sprintf("%v", c[0])

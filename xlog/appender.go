@@ -66,7 +66,6 @@ func (a *logWriter) Log(event *Event) {
 		}
 		if apppender, ok := a.appenders[layout.Type]; ok {
 			apppender.Write(layout, event.Format(layout))
-			continue
 		}
 	}
 }

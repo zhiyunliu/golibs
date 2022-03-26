@@ -32,10 +32,13 @@ func (a *StdoutAppender) Name() string {
 func (f *StdoutAppender) Write(layout *Layout, event *Event) (err error) {
 	if f.stdWriter == nil {
 		f.writerLock.Lock()
+		defer f.writerLock.Unlock()
 		if f.stdWriter == nil {
 			f.stdWriter, err = newStdWriter(layout)
+			if err != nil {
+				return err
+			}
 		}
-		f.writerLock.Unlock()
 	}
 	f.stdWriter.Write(event)
 	return nil
