@@ -55,7 +55,7 @@ func (f *fileWriter) Write(event *Event) {
 		f.countChan <- struct{}{}
 		f.writeCount = 0
 	}
-	f.writer.WriteString(event.Output)
+	f.writer.WriteString(event.Output + "\n")
 	f.lastWrite = time.Now()
 }
 

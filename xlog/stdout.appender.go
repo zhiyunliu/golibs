@@ -19,7 +19,7 @@ type StdoutAppender struct {
 
 //NewStudoutAppender 构建基于文件流的日志输出对象
 func NewStudoutAppender() (sa *StdoutAppender) {
-	sa = &StdoutAppender{cleanInterval: 200, closeChan: make(chan struct{})}
+	sa = &StdoutAppender{cleanInterval: 20, closeChan: make(chan struct{})}
 	sa.cleanTicker = time.NewTicker(time.Duration(sa.cleanInterval) * time.Millisecond)
 	return
 }
