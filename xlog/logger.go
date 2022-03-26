@@ -6,6 +6,5 @@ type Logger interface {
 
 	Log(level Level, args ...interface{})
 	Logf(level Level, format string, args ...interface{})
-
 	Close()
 }

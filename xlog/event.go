@@ -32,6 +32,7 @@ func init() {
 type Event struct {
 	Name    string
 	Level   Level
+	Idx     int
 	LogTime time.Time
 	Session string
 	Content string
@@ -92,6 +93,8 @@ func (e *Event) Transform(template string, isJson bool) string {
 			return e.Level.FullName()
 		case "l":
 			return e.Level.Name()
+		case "idx":
+			return fmt.Sprintf("%d", e.Idx)
 		case "pid":
 			return fmt.Sprintf("%d", curPid)
 		case "n":

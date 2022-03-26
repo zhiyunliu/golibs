@@ -11,6 +11,7 @@ import (
 type LoggerWrap struct {
 	opts    *options
 	isPause bool
+	idx     int
 }
 
 var (
@@ -42,6 +43,7 @@ func New(opt ...Option) (logger Logger) {
 	for i := range opt {
 		opt[i](opts)
 	}
+	wrapper.idx = 0
 	wrapper.opts = opts
 	return wrapper
 }
@@ -54,6 +56,7 @@ func (logger *LoggerWrap) Name() string {
 //Close 关闭当前日志组件
 func (logger *LoggerWrap) Close() {
 	logger.opts.reset()
+	logger.idx = 0
 	loggerPool.Put(logger)
 }
 
@@ -146,6 +149,8 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 		return
 	}
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, fmt.Sprintf(format, args...), logger.opts.data)
+	logger.idx++
+	event.Idx = logger.idx
 	loggerEventChan <- event
 }
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
@@ -157,7 +162,10 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	if hasClosed {
 		return
 	}
+
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, getString(args...), logger.opts.data)
+	logger.idx++
+	event.Idx = logger.idx
 	loggerEventChan <- event
 }
 
