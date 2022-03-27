@@ -23,3 +23,11 @@ func (m SMap) Get(name string) string {
 	}
 	return ""
 }
+
+func (m SMap) Del(key string) {
+	delete(m, key)
+}
+
+func (m SMap) Set(key, val string) {
+	m[key] = val
+}
