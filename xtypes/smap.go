@@ -24,6 +24,13 @@ func (m SMap) Get(name string) string {
 	return ""
 }
 
+func (m SMap) GetWithDefault(name string, def string) string {
+	if v, ok := m[name]; ok {
+		return v
+	}
+	return def
+}
+
 func (m SMap) Del(key string) {
 	delete(m, key)
 }
