@@ -32,7 +32,7 @@ func init() {
 type Event struct {
 	Name    string
 	Level   Level
-	Idx     int
+	Idx     int32
 	LogTime time.Time
 	Session string
 	Content string

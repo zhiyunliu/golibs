@@ -3,6 +3,7 @@ package xlog
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"bytes"
 )
@@ -11,15 +12,19 @@ import (
 type LoggerWrap struct {
 	opts    *options
 	isPause bool
-	idx     int
+	idx     int32
 }
 
 var (
 	loggerEventChan chan *Event
 	loggerPool      *sync.Pool
 	closeChan       chan struct{}
-	onceLock        sync.Once
 	hasClosed       = false
+
+	onceLock      sync.Once
+	closeChanLock sync.Once
+	adjustLock    sync.Mutex
+	writeRoutines []chan struct{}
 )
 
 func init() {
@@ -30,8 +35,8 @@ func init() {
 	}
 	closeChan = make(chan struct{})
 	loggerEventChan = make(chan *Event, 20000)
-	go loopWriteEvent()
-
+	writeRoutines = make([]chan struct{}, 0)
+	adjustmentWriteRoutine()
 }
 
 //New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
@@ -149,7 +154,7 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 		return
 	}
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, fmt.Sprintf(format, args...), logger.opts.data)
-	logger.idx++
+	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
 	loggerEventChan <- event
 }
@@ -164,26 +169,65 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	}
 
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, getString(args...), logger.opts.data)
-	logger.idx++
+	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
 	loggerEventChan <- event
 }
 
-func loopWriteEvent() {
-	for v := range loggerEventChan {
-		asyncWrite(v)
-		v.Close()
+func loopWriteEvent(item chan struct{}) {
+	for {
+		select {
+		case <-item:
+			return
+		case v, ok := <-loggerEventChan:
+			if !ok {
+				closeChanLock.Do(func() {
+					close(closeChan)
+				})
+				return
+			}
+			asyncWrite(v)
+			v.Close()
+		}
 	}
-	close(closeChan)
+}
+
+func adjustmentWriteRoutine() {
+	adjustLock.Lock()
+	defer adjustLock.Unlock()
+
+	curCnt := len(writeRoutines)
+	if logconcurrency == curCnt {
+		return
+	}
+
+	if logconcurrency > curCnt {
+		for i, adc := 0, logconcurrency-curCnt; i < adc; i++ {
+			nwr := make(chan struct{})
+			writeRoutines = append(writeRoutines, nwr)
+			go loopWriteEvent(nwr)
+		}
+		return
+	}
+
+	if logconcurrency < curCnt {
+		newRoutines := writeRoutines[0:logconcurrency]
+		overRoutines := writeRoutines[logconcurrency:]
+		for _, item := range overRoutines {
+			close(item)
+		}
+		writeRoutines = newRoutines
+		return
+	}
 }
 
 func getString(c ...interface{}) string {
 	if len(c) == 1 {
-		return fmt.Sprintf("%v", c[0])
+		return fmt.Sprintf("%+v", c[0])
 	}
 	var buf bytes.Buffer
 	for i := 0; i < len(c); i++ {
-		buf.WriteString(fmt.Sprint(c[i]))
+		buf.WriteString(fmt.Sprintf("%+v", c[i]))
 		if i != len(c)-1 {
 			buf.WriteString(" ")
 		}
