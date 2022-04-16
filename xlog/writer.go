@@ -49,7 +49,7 @@ func loadLayout(path string) {
 		sysLogger.Errorf("读取配置文件失败 %v", err)
 		return
 	}
-	globalPause = !layouts.Status
+	_globalPause = !layouts.Status
 	AddLayout(layouts.Layouts...)
 }
 

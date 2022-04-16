@@ -36,7 +36,7 @@ func init() {
 	closeChan = make(chan struct{})
 	loggerEventChan = make(chan *Event, 20000)
 	writeRoutines = make([]chan struct{}, 0)
-	adjustmentWriteRoutine()
+	adjustmentWriteRoutine(1)
 }
 
 //New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
@@ -82,7 +82,7 @@ func (logger *LoggerWrap) GetSessionID() string {
 
 //Debug 输出debug日志
 func (logger *LoggerWrap) Debug(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelDebug, args...)
@@ -90,7 +90,7 @@ func (logger *LoggerWrap) Debug(args ...interface{}) {
 
 //Debugf 输出debug日志
 func (logger *LoggerWrap) Debugf(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelDebug, format, args...)
@@ -98,7 +98,7 @@ func (logger *LoggerWrap) Debugf(format string, args ...interface{}) {
 
 //Info 输出info日志
 func (logger *LoggerWrap) Info(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelInfo, args...)
@@ -106,7 +106,7 @@ func (logger *LoggerWrap) Info(args ...interface{}) {
 
 //Infof 输出info日志
 func (logger *LoggerWrap) Infof(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelInfo, format, args...)
@@ -114,7 +114,7 @@ func (logger *LoggerWrap) Infof(format string, args ...interface{}) {
 
 //Warn 输出info日志
 func (logger *LoggerWrap) Warn(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelWarn, args...)
@@ -122,7 +122,7 @@ func (logger *LoggerWrap) Warn(args ...interface{}) {
 
 //Warnf 输出info日志
 func (logger *LoggerWrap) Warnf(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelWarn, format, args...)
@@ -130,7 +130,7 @@ func (logger *LoggerWrap) Warnf(format string, args ...interface{}) {
 
 //Error 输出Error日志
 func (logger *LoggerWrap) Error(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelError, args...)
@@ -138,7 +138,7 @@ func (logger *LoggerWrap) Error(args ...interface{}) {
 
 //Errorf 输出Errorf日志
 func (logger *LoggerWrap) Errorf(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelError, format, args...)
@@ -192,17 +192,17 @@ func loopWriteEvent(item chan struct{}) {
 	}
 }
 
-func adjustmentWriteRoutine() {
+func adjustmentWriteRoutine(cnt int) {
 	adjustLock.Lock()
 	defer adjustLock.Unlock()
 
 	curCnt := len(writeRoutines)
-	if logconcurrency == curCnt {
+	if cnt == curCnt {
 		return
 	}
 
-	if logconcurrency > curCnt {
-		for i, adc := 0, logconcurrency-curCnt; i < adc; i++ {
+	if cnt > curCnt {
+		for i, adc := 0, cnt-curCnt; i < adc; i++ {
 			nwr := make(chan struct{})
 			writeRoutines = append(writeRoutines, nwr)
 			go loopWriteEvent(nwr)
@@ -210,9 +210,9 @@ func adjustmentWriteRoutine() {
 		return
 	}
 
-	if logconcurrency < curCnt {
-		newRoutines := writeRoutines[0:logconcurrency]
-		overRoutines := writeRoutines[logconcurrency:]
+	if cnt < curCnt {
+		newRoutines := writeRoutines[0:cnt]
+		overRoutines := writeRoutines[cnt:]
 		for _, item := range overRoutines {
 			close(item)
 		}
