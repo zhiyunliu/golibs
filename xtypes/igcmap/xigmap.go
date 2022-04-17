@@ -91,7 +91,9 @@ func (m *IgcMap) Iter(callback func(key string, val interface{}) bool) {
 func (m *IgcMap) Keys() []string {
 	m.rwmutex.RLock()
 	defer m.rwmutex.RUnlock()
-	return m.data.Keys()
+	keys := m.data.Keys()
+	sort.Strings(keys)
+	return keys
 }
 
 //Del 删除一个元素
@@ -118,9 +120,6 @@ func (m *IgcMap) Orignal() map[string]interface{} {
 
 //Equal 判定两个对象是否相等
 func (m *IgcMap) Equal(o *IgcMap) bool {
-	if m == nil && o == nil {
-		return true
-	}
 	if m == nil || o == nil {
 		return false
 	}

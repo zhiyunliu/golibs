@@ -11,6 +11,7 @@ func TestNew(t *testing.T) {
 		orignal map[string]interface{}
 		want    *IgcMap
 	}{
+		{name: "0.Nil初始化", orignal: nil, want: &IgcMap{data: map[string]interface{}{}}},
 		{name: "1.无重复", orignal: map[string]interface{}{"a": 1, "b": "2"}, want: &IgcMap{data: map[string]interface{}{"a": 1, "b": "2"}}},
 		{name: "2.有重复,按key排序取后者", orignal: map[string]interface{}{"a": 1, "A": "2"}, want: &IgcMap{data: map[string]interface{}{"a": 1}}},
 	}
@@ -199,6 +200,31 @@ func TestIgcMap_Orignal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.m.Orignal(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("IgcMap.Orignal() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIgcMap_Equal(t *testing.T) {
+
+	tests := []struct {
+		name string
+		m    *IgcMap
+		o    *IgcMap
+		want bool
+	}{
+		{name: "1.", m: New(nil), o: nil, want: false},
+		{name: "2.key一致", m: New(nil), o: New(map[string]interface{}{}), want: true},
+		{name: "2.key一致,值不相等", m: New(map[string]interface{}{"a": 1}), o: New(map[string]interface{}{"a": 2}), want: false},
+		{name: "3.key长度一致,key一致", m: New(map[string]interface{}{"a": 1}), o: New(map[string]interface{}{"a": 1}), want: true},
+		{name: "4.key长度一致,key不一致", m: New(map[string]interface{}{"a": 1}), o: New(map[string]interface{}{"B": 1}), want: false},
+		{name: "5.key长度一致,key一致,大小写不一致", m: New(map[string]interface{}{"a": 1}), o: New(map[string]interface{}{"A": 1}), want: true},
+		{name: "2.key不一致", m: New(nil), o: New(map[string]interface{}{"a": 1}), want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.m.Equal(tt.o); got != tt.want {
+				t.Errorf("IgcMap.Equal() = %v, want %v", got, tt.want)
 			}
 		})
 	}
