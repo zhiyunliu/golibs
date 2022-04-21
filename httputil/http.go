@@ -1,6 +1,9 @@
 package httputil
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
 	"strings"
 	"sync"
 )
@@ -47,4 +50,31 @@ func ContentSubtype(contentType string) string {
 		return ""
 	}
 	return contentType[left+1 : right]
+}
+
+func Request(method string, url string, data []byte, opts ...Option) (respBytes []byte, err error) {
+	opt := &options{
+		client: http.DefaultClient,
+	}
+
+	for i := range opts {
+		opts[i](opt)
+	}
+	method = strings.ToUpper(method)
+	req, err := http.NewRequest(method, url, bytes.NewReader(data))
+	if err != nil {
+		return
+	}
+	req.Header = opt.header
+	if opt.tls != nil {
+		req.TLS = opt.tls
+	}
+
+	resp, err := opt.client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	respBytes, err = ioutil.ReadAll(resp.Body)
+	return
 }
