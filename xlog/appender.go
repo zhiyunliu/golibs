@@ -35,6 +35,14 @@ func (a *logWriter) Attach(appender Appender) {
 	}
 	a.appenders[name] = appender
 }
+func (a *logWriter) Detach(name string) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	if appender, ok := a.appenders[name]; ok {
+		appender.Close()
+	}
+	delete(a.appenders, name)
+}
 
 //Append 添加layout配置
 func (a *logWriter) Append(layouts ...*Layout) {

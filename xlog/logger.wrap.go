@@ -16,26 +16,21 @@ type LoggerWrap struct {
 }
 
 var (
-	loggerEventChan chan *Event
-	loggerPool      *sync.Pool
-	closeChan       chan struct{}
-	hasClosed       = false
+	_loggerPool *sync.Pool
+	_hasClosed  = false
 
-	onceLock      sync.Once
-	closeChanLock sync.Once
-	adjustLock    sync.Mutex
-	writeRoutines []chan struct{}
+	_closeLock   sync.Once
+	_adjustLock  sync.Mutex
+	_writerPipes WriterPipes
 )
 
 func init() {
-	loggerPool = &sync.Pool{
+	_loggerPool = &sync.Pool{
 		New: func() interface{} {
 			return New()
 		},
 	}
-	closeChan = make(chan struct{})
-	loggerEventChan = make(chan *Event, 20000)
-	writeRoutines = make([]chan struct{}, 0)
+	_writerPipes = make(WriterPipes, 0)
 	adjustmentWriteRoutine(1)
 }
 
@@ -62,7 +57,7 @@ func (logger *LoggerWrap) Name() string {
 func (logger *LoggerWrap) Close() {
 	logger.opts.reset()
 	logger.idx = 0
-	loggerPool.Put(logger)
+	_loggerPool.Put(logger)
 }
 
 //Pause 暂停记录
@@ -150,13 +145,13 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
-	if hasClosed {
+	if _hasClosed {
 		return
 	}
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, fmt.Sprintf(format, args...), logger.opts.data)
 	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
-	loggerEventChan <- event
+	_writerPipes.Write(event)
 }
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	defer func() {
@@ -164,26 +159,24 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
-	if hasClosed {
+	if _hasClosed {
 		return
 	}
 
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, getString(args...), logger.opts.data)
 	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
-	loggerEventChan <- event
+	_writerPipes.Write(event)
 }
 
-func loopWriteEvent(item chan struct{}) {
+func loopWriteEvent(pipe *WriterPipe) {
 	for {
 		select {
-		case <-item:
+		case <-pipe.completeChan:
 			return
-		case v, ok := <-loggerEventChan:
+		case v, ok := <-pipe.eventsChan:
 			if !ok {
-				closeChanLock.Do(func() {
-					close(closeChan)
-				})
+				pipe.complete()
 				return
 			}
 			asyncWrite(v)
@@ -193,30 +186,32 @@ func loopWriteEvent(item chan struct{}) {
 }
 
 func adjustmentWriteRoutine(cnt int) {
-	adjustLock.Lock()
-	defer adjustLock.Unlock()
-
-	curCnt := len(writeRoutines)
+	_adjustLock.Lock()
+	defer _adjustLock.Unlock()
+	if cnt <= 0 {
+		cnt = 1
+	}
+	curCnt := len(_writerPipes)
 	if cnt == curCnt {
 		return
 	}
 
 	if cnt > curCnt {
 		for i, adc := 0, cnt-curCnt; i < adc; i++ {
-			nwr := make(chan struct{})
-			writeRoutines = append(writeRoutines, nwr)
+			nwr := newWriterPipe()
+			_writerPipes = append(_writerPipes, nwr)
 			go loopWriteEvent(nwr)
 		}
 		return
 	}
 
 	if cnt < curCnt {
-		newRoutines := writeRoutines[0:cnt]
-		overRoutines := writeRoutines[cnt:]
-		for _, item := range overRoutines {
-			close(item)
+		newPipes := _writerPipes[0:cnt]
+		overPipes := _writerPipes[cnt:]
+		for _, item := range overPipes {
+			item.Close()
 		}
-		writeRoutines = newRoutines
+		_writerPipes = newPipes
 		return
 	}
 }
@@ -236,7 +231,7 @@ func getString(c ...interface{}) string {
 }
 
 func GetLogger(opts ...Option) Logger {
-	log := loggerPool.Get().(*LoggerWrap)
+	log := _loggerPool.Get().(*LoggerWrap)
 	for i := range opts {
 		opts[i](log.opts)
 	}
@@ -245,9 +240,9 @@ func GetLogger(opts ...Option) Logger {
 
 //Close 关闭所有日志组件
 func Close() {
-	onceLock.Do(func() {
-		close(loggerEventChan)
-		<-closeChan
-		mainWriter.Close()
+	_closeLock.Do(func() {
+		_hasClosed = true
+		_writerPipes.CloseAndWait()
+		_mainWriter.Close()
 	})
 }
