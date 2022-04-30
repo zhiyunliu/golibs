@@ -7,7 +7,7 @@ import (
 	"github.com/zhiyunliu/golibs/xlist"
 )
 
-type DelayEngine struct {
+type Engine struct {
 	slotCount int
 	//当前下标
 	curIndex uint
@@ -31,8 +31,8 @@ type dealyTask struct {
 }
 
 //创建一个延迟消息
-func NewDelayEngine(slotCount int) *DelayEngine {
-	dm := &DelayEngine{
+func NewEngine(slotCount int) *Engine {
+	dm := &Engine{
 		slotCount: slotCount,
 		curIndex:  0,
 		closed:    make(chan struct{}),
@@ -45,27 +45,25 @@ func NewDelayEngine(slotCount int) *DelayEngine {
 }
 
 //启动延迟消息
-func (e *DelayEngine) Start() {
+func (e *Engine) Start() {
 	go e.taskLoop()
 	<-e.closed
 }
 
 //关闭延迟消息
-func (e *DelayEngine) Close() {
+func (e *Engine) Close() {
 	e.onceLock.Do(func() {
 		close(e.closed)
 	})
 }
 
 //处理每1秒的任务
-func (e *DelayEngine) taskLoop() {
+func (e *Engine) taskLoop() {
 	ticker := time.NewTicker(time.Second)
 	for {
 		select {
 		case <-e.closed:
-			{
-				return
-			}
+			return
 		case <-ticker.C:
 			list := e.slots[e.curIndex]
 			if !list.IsEmpty() {
@@ -88,7 +86,7 @@ func (e *DelayEngine) taskLoop() {
 }
 
 //添加任务
-func (e *DelayEngine) AddTask(seconds uint, callback TaskCallback, params ...interface{}) error {
+func (e *Engine) AddTask(seconds uint, callback TaskCallback, params ...interface{}) error {
 	slotIdx := (e.curIndex + seconds) % uint(e.slotCount)
 	//把任务加入tasks中
 	e.slots[slotIdx].Append(&dealyTask{
