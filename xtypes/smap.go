@@ -7,6 +7,16 @@ import (
 
 type SMap map[string]string
 
+func (m SMap) Keys() []string {
+	keys := make([]string, len(m))
+	idx := 0
+	for k := range m {
+		keys[idx] = k
+		idx++
+	}
+	return keys
+}
+
 func (m SMap) Scan(obj interface{}) error {
 	bytes, _ := json.Marshal(m)
 	return json.Unmarshal(bytes, obj)
@@ -37,4 +47,8 @@ func (m SMap) Del(key string) {
 
 func (m SMap) Set(key, val string) {
 	m[key] = val
+}
+
+func (m SMap) Values() map[string]string {
+	return m
 }
