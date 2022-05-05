@@ -37,7 +37,7 @@ func (p *WriterPipe) complete() error {
 }
 
 func (ps WriterPipes) Write(evt *Event) error {
-	idx := time.Now().Nanosecond() % len(ps)
+	idx := int(time.Now().UnixMicro() % int64(len(ps)))
 	p := ps[0]
 	if len(ps) > idx {
 		p = ps[idx]

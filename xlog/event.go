@@ -17,6 +17,7 @@ var eventPool *sync.Pool
 var appName string = filepath.Base(os.Args[0])
 var localip string
 var curPid int
+var word, _ = regexp.Compile(`%\w+`)
 
 func init() {
 	eventPool = &sync.Pool{
@@ -59,8 +60,6 @@ func (e *Event) Format(layout *Layout) *Event {
 }
 
 func (e *Event) Transform(template string, isJson bool) string {
-	word, _ := regexp.Compile(`%\w+`)
-
 	//@变量, 将数据放入params中
 	return word.ReplaceAllStringFunc(template, func(s string) string {
 		key := s[1:]

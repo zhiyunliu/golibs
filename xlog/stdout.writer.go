@@ -30,7 +30,7 @@ type stdWriter struct {
 func newStdWriter(layout *Layout) (fa *stdWriter, err error) {
 	fa = &stdWriter{
 		layout:    layout,
-		interval:  time.Second * 3,
+		interval:  time.Microsecond * 100,
 		countChan: make(chan struct{}, 100),
 		closeChan: make(chan struct{}),
 	}

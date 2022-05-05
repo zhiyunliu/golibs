@@ -31,6 +31,16 @@ func RemoveAppender(name string) {
 	_mainWriter.Detach(name)
 }
 
+//RemoveAppender 移除Appender
+func Appenders() []string {
+	result := make([]string, len(_mainWriter.appenders))
+	idx := 0
+	for key := range _mainWriter.appenders {
+		result[idx] = key
+	}
+	return result
+}
+
 //AddLayout 添加日志输出配置
 func AddLayout(l ...*Layout) {
 	_mainWriter.Append(l...)
