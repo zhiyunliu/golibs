@@ -2,7 +2,6 @@ package xlog
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -67,7 +66,7 @@ func (f *stdWriter) Write(event *Event) {
 	case LevelError:
 		f.output.Error(event.Output)
 	case LevelFatal:
-		f.output.Output("", log.Lfatal, 1, fmt.Sprintln(event.Output))
+		f.output.Output("", log.Lfatal, 1, event.Output)
 	}
 	f.lastWrite = time.Now()
 }
