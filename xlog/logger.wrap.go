@@ -15,6 +15,11 @@ type LoggerWrap struct {
 	idx     int32
 }
 
+type StatsInfo struct {
+	PipeCount int
+	Pipes     []int
+}
+
 var (
 	_loggerPool *sync.Pool
 	_hasClosed  = false
@@ -46,6 +51,20 @@ func New(opt ...Option) (logger Logger) {
 	wrapper.idx = 0
 	wrapper.opts = opts
 	return wrapper
+}
+
+func Stats() StatsInfo {
+	_adjustLock.Lock()
+	defer _adjustLock.Unlock()
+
+	info := StatsInfo{
+		PipeCount: len(_writerPipes),
+	}
+	info.Pipes = make([]int, info.PipeCount)
+	for i := range _writerPipes {
+		info.Pipes[i] = len(_writerPipes[i].eventsChan)
+	}
+	return info
 }
 
 //Name 名字

@@ -18,7 +18,7 @@ func WithHeader(name string, val ...string) Option {
 		if o.header == nil {
 			o.header = make(http.Header)
 		}
-		if len(val) == 0 {
+		if len(name) == 0 || len(val) == 0 {
 			return
 		}
 		o.header[name] = val
