@@ -3,6 +3,8 @@ package xtypes
 import (
 	"bytes"
 	"encoding/json"
+
+	"github.com/zhiyunliu/golibs/xtransform"
 )
 
 type SMap map[string]string
@@ -51,4 +53,8 @@ func (m SMap) Set(key, val string) {
 
 func (m SMap) Values() map[string]string {
 	return m
+}
+
+func (m SMap) Translate(tpl string) string {
+	return xtransform.TranslateMap(tpl, m)
 }

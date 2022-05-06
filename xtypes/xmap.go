@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/zhiyunliu/golibs/xtransform"
 )
 
 type XMap map[string]interface{}
@@ -70,4 +72,8 @@ func (m XMap) SMap() SMap {
 		sm[k] = fmt.Sprintf("%+v", v)
 	}
 	return sm
+}
+
+func (m XMap) Translate(tpl string) string {
+	return xtransform.Translate(tpl, m)
 }
