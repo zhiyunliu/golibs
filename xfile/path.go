@@ -2,7 +2,9 @@ package xfile
 
 import (
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 )
 
 //Exists 检查文件或路径是否存在
@@ -18,4 +20,10 @@ func GetAbs(path string) (string, error) {
 		return "", err
 	}
 	return absPath, nil
+}
+
+func GetNameWithoutExt(filename string) string {
+	filename = filepath.Base(filename)
+	ext := path.Ext(filename)
+	return strings.TrimSuffix(filename, ext)
 }

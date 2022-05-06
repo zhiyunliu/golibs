@@ -2,7 +2,6 @@ package xlog
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -30,7 +29,7 @@ type stdWriter struct {
 func newStdWriter(layout *Layout) (fa *stdWriter, err error) {
 	fa = &stdWriter{
 		layout:    layout,
-		interval:  time.Second * 3,
+		interval:  time.Microsecond * 100,
 		countChan: make(chan struct{}, 100),
 		closeChan: make(chan struct{}),
 	}
@@ -67,7 +66,7 @@ func (f *stdWriter) Write(event *Event) {
 	case LevelError:
 		f.output.Error(event.Output)
 	case LevelFatal:
-		f.output.Output("", log.Lfatal, 1, fmt.Sprintln(event.Output))
+		f.output.Output("", log.Lfatal, 1, event.Output)
 	}
 	f.lastWrite = time.Now()
 }
@@ -75,6 +74,7 @@ func (f *stdWriter) Write(event *Event) {
 //Close 关闭当前appender
 func (f *stdWriter) Close() {
 	f.onceLock.Do(func() {
+		f.flush()
 		close(f.closeChan)
 		f.ticker.Stop()
 	})
@@ -85,7 +85,6 @@ func (f *stdWriter) timeFlush() {
 	for {
 		select {
 		case <-f.closeChan:
-			f.flush()
 			return
 		case <-f.ticker.C:
 			f.flush()

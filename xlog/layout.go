@@ -30,7 +30,7 @@ type layoutSetting struct {
 
 func newDefLayouts() *layoutSetting {
 	setting := &layoutSetting{Layouts: make([]*Layout, 0, 2)}
-	defaultLayout := "[%datetime][%l][%session] %content%n"
+	defaultLayout := "[%datetime][%l][%session][%idx] %content"
 
 	fileLayout := &Layout{Type: File, LevelName: LevelAll.Name()}
 	fileLayout.Path = "../logs/%date/%level/%hh.log"

@@ -56,12 +56,14 @@ func (f *fileWriter) Write(event *Event) {
 		f.writeCount = 0
 	}
 	f.writer.WriteString(event.Output)
+	f.writer.WriteString("\n")
 	f.lastWrite = time.Now()
 }
 
 //Close 关闭当前appender
 func (f *fileWriter) Close() {
 	f.onceLock.Do(func() {
+		f.flush()
 		close(f.closeChan)
 		f.ticker.Stop()
 	})
@@ -72,7 +74,6 @@ func (f *fileWriter) timeFlush() {
 	for {
 		select {
 		case <-f.closeChan:
-			f.flush()
 			return
 		case <-f.ticker.C:
 			f.flush()
@@ -83,8 +84,8 @@ func (f *fileWriter) timeFlush() {
 }
 func (f *fileWriter) flush() {
 	f.lock.Lock()
+	defer f.lock.Unlock()
 	if err := f.writer.Flush(); err != nil {
 		sysLogger.Error("file.write.err:", err)
 	}
-	f.lock.Unlock()
 }

@@ -19,20 +19,35 @@ func getStack() string {
 }
 
 //默认appender写入器
-var mainWriter = newlogWriter()
+var _mainWriter = newlogWriter()
 
 //AddAppender 添加appender
 func AddAppender(appender Appender) {
-	mainWriter.Attach(appender)
+	_mainWriter.Attach(appender)
+}
+
+//RemoveAppender 移除Appender
+func RemoveAppender(name string) {
+	_mainWriter.Detach(name)
+}
+
+//RemoveAppender 移除Appender
+func Appenders() []string {
+	result := make([]string, len(_mainWriter.appenders))
+	idx := 0
+	for key := range _mainWriter.appenders {
+		result[idx] = key
+	}
+	return result
 }
 
 //AddLayout 添加日志输出配置
 func AddLayout(l ...*Layout) {
-	mainWriter.Append(l...)
+	_mainWriter.Append(l...)
 }
 
 func asyncWrite(event *Event) {
-	mainWriter.Log(event)
+	_mainWriter.Log(event)
 }
 
 func loadLayout(path string) {
@@ -49,15 +64,18 @@ func loadLayout(path string) {
 		sysLogger.Errorf("读取配置文件失败 %v", err)
 		return
 	}
-	globalPause = !layouts.Status
+	_globalPause = !layouts.Status
 	AddLayout(layouts.Layouts...)
 }
 
 var LogPath = "../conf/logger.json"
 
 //进行日志配置文件初始化
-func init() {
+func defaultAppender() error {
 	AddAppender(NewFileAppender())
 	AddAppender(NewStudoutAppender())
 	loadLayout(LogPath)
+	return nil
 }
+
+var _ = defaultAppender()

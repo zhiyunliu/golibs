@@ -12,5 +12,5 @@ func Create() string {
 	var buf [32]byte
 	uval := uuid.New()
 	hex.Encode(buf[:], uval[:])
-	return bytesconv.BytesToString(buf[:])
+	return bytesconv.BytesToString(buf[:16])
 }

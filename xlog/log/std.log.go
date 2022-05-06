@@ -79,8 +79,8 @@ var colors = []int{
 	ForeCyan,
 	ForeBlue,
 	ForeGreen,
-	ForeYellow,
 	ForeRed,
+	ForeYellow,
 	ForePurple,
 }
 

@@ -3,6 +3,7 @@ package xlog
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"bytes"
 )
@@ -11,26 +12,31 @@ import (
 type LoggerWrap struct {
 	opts    *options
 	isPause bool
+	idx     int32
+}
+
+type StatsInfo struct {
+	PipeCount int
+	Pipes     []int
 }
 
 var (
-	loggerEventChan chan *Event
-	loggerPool      *sync.Pool
-	closeChan       chan struct{}
-	onceLock        sync.Once
-	hasClosed       = false
+	_loggerPool *sync.Pool
+	_hasClosed  = false
+
+	_closeLock   sync.Once
+	_adjustLock  sync.Mutex
+	_writerPipes WriterPipes
 )
 
 func init() {
-	loggerPool = &sync.Pool{
+	_loggerPool = &sync.Pool{
 		New: func() interface{} {
 			return New()
 		},
 	}
-	closeChan = make(chan struct{})
-	loggerEventChan = make(chan *Event, 20000)
-	go loopWriteEvent()
-
+	_writerPipes = make(WriterPipes, 0)
+	adjustmentWriteRoutine(1)
 }
 
 //New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
@@ -42,8 +48,23 @@ func New(opt ...Option) (logger Logger) {
 	for i := range opt {
 		opt[i](opts)
 	}
+	wrapper.idx = 0
 	wrapper.opts = opts
 	return wrapper
+}
+
+func Stats() StatsInfo {
+	_adjustLock.Lock()
+	defer _adjustLock.Unlock()
+
+	info := StatsInfo{
+		PipeCount: len(_writerPipes),
+	}
+	info.Pipes = make([]int, info.PipeCount)
+	for i := range _writerPipes {
+		info.Pipes[i] = len(_writerPipes[i].eventsChan)
+	}
+	return info
 }
 
 //Name 名字
@@ -54,7 +75,8 @@ func (logger *LoggerWrap) Name() string {
 //Close 关闭当前日志组件
 func (logger *LoggerWrap) Close() {
 	logger.opts.reset()
-	loggerPool.Put(logger)
+	logger.idx = 0
+	_loggerPool.Put(logger)
 }
 
 //Pause 暂停记录
@@ -74,7 +96,7 @@ func (logger *LoggerWrap) GetSessionID() string {
 
 //Debug 输出debug日志
 func (logger *LoggerWrap) Debug(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelDebug, args...)
@@ -82,7 +104,7 @@ func (logger *LoggerWrap) Debug(args ...interface{}) {
 
 //Debugf 输出debug日志
 func (logger *LoggerWrap) Debugf(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelDebug, format, args...)
@@ -90,7 +112,7 @@ func (logger *LoggerWrap) Debugf(format string, args ...interface{}) {
 
 //Info 输出info日志
 func (logger *LoggerWrap) Info(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelInfo, args...)
@@ -98,7 +120,7 @@ func (logger *LoggerWrap) Info(args ...interface{}) {
 
 //Infof 输出info日志
 func (logger *LoggerWrap) Infof(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelInfo, format, args...)
@@ -106,7 +128,7 @@ func (logger *LoggerWrap) Infof(format string, args ...interface{}) {
 
 //Warn 输出info日志
 func (logger *LoggerWrap) Warn(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelWarn, args...)
@@ -114,7 +136,7 @@ func (logger *LoggerWrap) Warn(args ...interface{}) {
 
 //Warnf 输出info日志
 func (logger *LoggerWrap) Warnf(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelWarn, format, args...)
@@ -122,7 +144,7 @@ func (logger *LoggerWrap) Warnf(format string, args ...interface{}) {
 
 //Error 输出Error日志
 func (logger *LoggerWrap) Error(args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Log(LevelError, args...)
@@ -130,7 +152,7 @@ func (logger *LoggerWrap) Error(args ...interface{}) {
 
 //Errorf 输出Errorf日志
 func (logger *LoggerWrap) Errorf(format string, args ...interface{}) {
-	if logger.isPause || globalPause {
+	if logger.isPause || _globalPause {
 		return
 	}
 	logger.Logf(LevelError, format, args...)
@@ -142,11 +164,13 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
-	if hasClosed {
+	if _hasClosed {
 		return
 	}
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, fmt.Sprintf(format, args...), logger.opts.data)
-	loggerEventChan <- event
+	atomic.AddInt32(&logger.idx, 1)
+	event.Idx = logger.idx
+	_writerPipes.Write(event)
 }
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	defer func() {
@@ -154,27 +178,70 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
-	if hasClosed {
+	if _hasClosed {
 		return
 	}
+
 	event := NewEvent(logger.opts.name, level, logger.opts.sid, getString(args...), logger.opts.data)
-	loggerEventChan <- event
+	atomic.AddInt32(&logger.idx, 1)
+	event.Idx = logger.idx
+	_writerPipes.Write(event)
 }
 
-func loopWriteEvent() {
-	for v := range loggerEventChan {
-		asyncWrite(v)
-		v.Close()
+func loopWriteEvent(pipe *WriterPipe) {
+	for {
+		select {
+		case <-pipe.completeChan:
+			return
+		case v, ok := <-pipe.eventsChan:
+			if !ok {
+				pipe.complete()
+				return
+			}
+			asyncWrite(v)
+			v.Close()
+		}
 	}
-	close(closeChan)
 }
+
+func adjustmentWriteRoutine(cnt int) {
+	_adjustLock.Lock()
+	defer _adjustLock.Unlock()
+	if cnt <= 0 {
+		cnt = 1
+	}
+	curCnt := len(_writerPipes)
+	if cnt == curCnt {
+		return
+	}
+
+	if cnt > curCnt {
+		for i, adc := 0, cnt-curCnt; i < adc; i++ {
+			nwr := newWriterPipe()
+			_writerPipes = append(_writerPipes, nwr)
+			go loopWriteEvent(nwr)
+		}
+		return
+	}
+
+	if cnt < curCnt {
+		newPipes := _writerPipes[0:cnt]
+		overPipes := _writerPipes[cnt:]
+		for _, item := range overPipes {
+			item.Close()
+		}
+		_writerPipes = newPipes
+		return
+	}
+}
+
 func getString(c ...interface{}) string {
 	if len(c) == 1 {
-		return fmt.Sprintf("%v", c[0])
+		return fmt.Sprintf("%+v", c[0])
 	}
 	var buf bytes.Buffer
 	for i := 0; i < len(c); i++ {
-		buf.WriteString(fmt.Sprint(c[i]))
+		buf.WriteString(fmt.Sprintf("%+v", c[i]))
 		if i != len(c)-1 {
 			buf.WriteString(" ")
 		}
@@ -183,7 +250,7 @@ func getString(c ...interface{}) string {
 }
 
 func GetLogger(opts ...Option) Logger {
-	log := loggerPool.Get().(*LoggerWrap)
+	log := _loggerPool.Get().(*LoggerWrap)
 	for i := range opts {
 		opts[i](log.opts)
 	}
@@ -192,9 +259,9 @@ func GetLogger(opts ...Option) Logger {
 
 //Close 关闭所有日志组件
 func Close() {
-	onceLock.Do(func() {
-		close(loggerEventChan)
-		<-closeChan
-		mainWriter.Close()
+	_closeLock.Do(func() {
+		_hasClosed = true
+		_writerPipes.CloseAndWait()
+		_mainWriter.Close()
 	})
 }
