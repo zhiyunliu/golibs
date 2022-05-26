@@ -27,7 +27,10 @@ func Translate(tpl string, data map[string]interface{}) string {
 		if strings.Contains(prop, "{") {
 			key = prop[2 : len(prop)-1]
 		}
-		return fmt.Sprint(data[key])
+		if data[key] != nil {
+			return fmt.Sprint(data[key])
+		}
+		return ""
 	})
 }
 

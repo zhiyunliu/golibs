@@ -11,7 +11,7 @@ import (
 //Layout 输出器
 type Layout struct {
 	Type         string `json:"type"`
-	LevelName    string `json:"level" valid:"in(off|info|warn|error|fatal|debug|all)"`
+	LevelName    string `json:"level" valid:"in(off|info|warn|error|panic|fatal|debug|all)"`
 	Path         string `json:"path,omitempty"`
 	Layout       string `json:"layout"`
 	Level        Level  `json:"-"`
@@ -28,9 +28,9 @@ type layoutSetting struct {
 	Layouts []*Layout `json:"layouts" toml:"layouts"`
 }
 
-func newDefLayouts() *layoutSetting {
+func newDefaultLayouts() *layoutSetting {
 	setting := &layoutSetting{Layouts: make([]*Layout, 0, 2)}
-	defaultLayout := "[%datetime][%l][%session][%idx] %content"
+	defaultLayout := "[%time][%l][%session][%idx] %content"
 
 	fileLayout := &Layout{Type: File, LevelName: LevelAll.Name()}
 	fileLayout.Path = "../logs/%date/%level/%hh.log"
@@ -56,7 +56,7 @@ func Encode(path string) error {
 	}
 	defer f.Close()
 	encoder := json.NewEncoder(f)
-	err = encoder.Encode(newDefLayouts())
+	err = encoder.Encode(newDefaultLayouts())
 	if err != nil {
 		return err
 	}

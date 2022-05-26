@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -72,20 +73,22 @@ func (e *Event) Transform(template string, isJson bool) string {
 			return e.Session
 		case "date":
 			return e.LogTime.Format("20060102")
+		case "time":
+			return e.LogTime.Format("15:04:05.000000")
 		case "datetime":
 			return e.LogTime.Format("2006-01-02 15:04:05.000000")
 		case "yy":
-			return e.LogTime.Format("06")
+			return strconv.FormatInt(int64(e.LogTime.Year()), 10)
 		case "mm":
-			return e.LogTime.Format("01")
+			return strconv.FormatInt(int64(e.LogTime.Month()), 10)
 		case "dd":
-			return e.LogTime.Format("02")
+			return strconv.FormatInt(int64(e.LogTime.Day()), 10)
 		case "hh":
-			return e.LogTime.Format("15")
+			return strconv.FormatInt(int64(e.LogTime.Hour()), 10)
 		case "mi":
-			return e.LogTime.Format("04")
+			return strconv.FormatInt(int64(e.LogTime.Minute()), 10)
 		case "ss":
-			return e.LogTime.Format("05")
+			return strconv.FormatInt(int64(e.LogTime.Second()), 10)
 		case "ms":
 			return fmt.Sprintf("%06d", e.LogTime.Nanosecond()/1e3)
 		case "level":
@@ -93,9 +96,9 @@ func (e *Event) Transform(template string, isJson bool) string {
 		case "l":
 			return e.Level.Name()
 		case "idx":
-			return fmt.Sprintf("%d", e.Idx)
+			return strconv.FormatInt(int64(e.Idx), 10)
 		case "pid":
-			return fmt.Sprintf("%d", curPid)
+			return strconv.FormatInt(int64(curPid), 10)
 		case "n":
 			return "\n"
 		case "content":

@@ -41,13 +41,14 @@ func GetLocalIP(masks ...string) string {
 
 	var ipLst []string
 	for _, addr := range addrs {
-		if !IsLocalIPAddr(addr.String()) {
+		ip := addr.(*net.IPNet).IP
+		if !IsLocalIPv4(ip) {
 			continue
 		}
 		if len(masks) == 0 {
-			return addr.String()
+			return ip.String()
 		}
-		ipLst = append(ipLst, addr.String())
+		ipLst = append(ipLst, ip.String())
 	}
 	for _, ip := range ipLst {
 		for _, m := range masks {
@@ -60,12 +61,12 @@ func GetLocalIP(masks ...string) string {
 }
 
 //ipv4: IsLocalIP 检测IP地址是否内网
-func IsLocalIPAddr(ip string) bool {
-	return IsLocalIP(net.ParseIP(ip))
+func IsLocalIPv4Addr(ip string) bool {
+	return IsLocalIPv4(net.ParseIP(ip))
 }
 
 // ipv4:IsLocalIP 检测IP地址是否内网
-func IsLocalIP(ip net.IP) bool {
+func IsLocalIPv4(ip net.IP) bool {
 	if ip.IsLoopback() {
 		return true
 	}

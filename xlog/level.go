@@ -12,7 +12,8 @@ const (
 	LevelInfo  Level = 2
 	LevelWarn  Level = 3
 	LevelError Level = 4
-	LevelFatal Level = 5
+	LevelPanic Level = 5
+	LevelFatal Level = 8
 	LevelOff   Level = 9
 )
 
@@ -24,6 +25,7 @@ func init() {
 	nameMap[LevelInfo] = "i"
 	nameMap[LevelWarn] = "w"
 	nameMap[LevelError] = "e"
+	nameMap[LevelPanic] = "p"
 	nameMap[LevelFatal] = "f"
 	nameMap[LevelAll] = "a"
 	nameMap[LevelOff] = "o"
@@ -32,6 +34,7 @@ func init() {
 	nameMap[_skipLevel+LevelInfo] = "info"
 	nameMap[_skipLevel+LevelWarn] = "warn"
 	nameMap[_skipLevel+LevelError] = "error"
+	nameMap[_skipLevel+LevelPanic] = "panic"
 	nameMap[_skipLevel+LevelFatal] = "fatal"
 	nameMap[_skipLevel+LevelAll] = "all"
 	nameMap[_skipLevel+LevelOff] = "off"
@@ -40,6 +43,7 @@ func init() {
 	levelMap["i"] = LevelInfo
 	levelMap["w"] = LevelWarn
 	levelMap["e"] = LevelError
+	levelMap["p"] = LevelPanic
 	levelMap["f"] = LevelFatal
 	levelMap["a"] = LevelAll
 	levelMap["o"] = LevelOff
@@ -48,6 +52,7 @@ func init() {
 	levelMap["info"] = LevelInfo
 	levelMap["warn"] = LevelWarn
 	levelMap["error"] = LevelError
+	levelMap["panic"] = LevelPanic
 	levelMap["fatal"] = LevelFatal
 	levelMap["all"] = LevelAll
 	levelMap["off"] = LevelOff

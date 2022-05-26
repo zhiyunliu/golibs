@@ -161,7 +161,7 @@ func (logger *LoggerWrap) Errorf(format string, args ...interface{}) {
 func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
+			sysLogger.Panicf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
 	if _hasClosed {
@@ -175,7 +175,7 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
+			sysLogger.Panicf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
 	if _hasClosed {

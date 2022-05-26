@@ -63,7 +63,7 @@ func (a *logWriter) Append(layouts ...*Layout) {
 func (a *logWriter) Log(event *Event) {
 	defer func() {
 		if err := recover(); err != nil {
-			sysLogger.Errorf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
+			sysLogger.Panicf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
 	a.lock.RLock()
