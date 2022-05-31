@@ -6,7 +6,11 @@ import (
 )
 
 const (
-	_baseContentType = "application"
+	_baseContentType       = "application"
+	_contentType           = "Content-Type"
+	_contentTypeJson       = "application/json;charset=utf-8"
+	_contentTypeUrlencoded = "application/x-www-form-urlencoded;charset=utf-8"
+	_contentTypeFormdata   = "multipart/form-data;charset=utf-8"
 )
 
 var _subTypeMap sync.Map
