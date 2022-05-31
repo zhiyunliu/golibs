@@ -25,6 +25,33 @@ func WithHeader(name string, val ...string) Option {
 	}
 }
 
+func WithContentTypeJson() Option {
+	return func(o *options) {
+		if o.header == nil {
+			o.header = make(http.Header)
+		}
+		o.header[_contentType] = []string{_contentTypeJson}
+	}
+}
+
+func WithContentTypeUrlencoded() Option {
+	return func(o *options) {
+		if o.header == nil {
+			o.header = make(http.Header)
+		}
+		o.header[_contentType] = []string{_contentTypeUrlencoded}
+	}
+}
+
+func WithContentTypeFormData() Option {
+	return func(o *options) {
+		if o.header == nil {
+			o.header = make(http.Header)
+		}
+		o.header[_contentType] = []string{_contentTypeFormdata}
+	}
+}
+
 func WithClient(client *http.Client) Option {
 	return func(o *options) {
 		o.client = client
