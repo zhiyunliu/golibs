@@ -1,5 +1,8 @@
 package xlog
 
+//pipe buffer size
+var BufferSize = 200000
+
 type options struct {
 	sid  string
 	name string
