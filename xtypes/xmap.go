@@ -66,6 +66,10 @@ func (m XMap) Len() int {
 	return len(m)
 }
 
+func (m XMap) IsEmpty() bool {
+	return len(m) == 0
+}
+
 func (m XMap) SMap() SMap {
 	sm := map[string]string{}
 	for k, v := range m {

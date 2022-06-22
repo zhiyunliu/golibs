@@ -17,10 +17,13 @@ const (
 	LevelOff   Level = 9
 )
 
-var nameMap = map[Level]string{}
-var levelMap = map[string]Level{}
+var nameMap, levelMap = initMap()
 
-func init() {
+func initMap() (map[Level]string, map[string]Level) {
+
+	var nameMap = map[Level]string{}
+	var levelMap = map[string]Level{}
+
 	nameMap[LevelDebug] = "d"
 	nameMap[LevelInfo] = "i"
 	nameMap[LevelWarn] = "w"
@@ -57,6 +60,7 @@ func init() {
 	levelMap["all"] = LevelAll
 	levelMap["off"] = LevelOff
 
+	return nameMap, levelMap
 }
 
 func (l Level) Name() string {

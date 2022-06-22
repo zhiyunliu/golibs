@@ -16,9 +16,12 @@ type WriterPipe struct {
 type WriterPipes []*WriterPipe
 
 func newWriterPipe() *WriterPipe {
+	if BufferSize <= 0 {
+		panic(fmt.Errorf("WriterPipe xlog.BufferSize must more than 0"))
+	}
 	return &WriterPipe{
 		completeChan: make(chan struct{}),
-		eventsChan:   make(chan *Event, 200000),
+		eventsChan:   make(chan *Event, BufferSize),
 		closed:       false,
 	}
 }
