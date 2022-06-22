@@ -34,13 +34,11 @@ func newDefaultLayouts() *layoutSetting {
 
 	fileLayout := &Layout{Type: File, LevelName: LevelAll.Name()}
 	fileLayout.Path = "../logs/%date/%level/%hh.log"
-	fileLayout.LevelName = fileLayout.Level.Name()
 	fileLayout.Layout = defaultLayout
 	fileLayout.Init()
 	setting.Layouts = append(setting.Layouts, fileLayout)
 
 	stdLayout := &Layout{Type: Stdout, LevelName: LevelAll.Name()}
-	stdLayout.LevelName = stdLayout.Level.Name()
 	stdLayout.Layout = defaultLayout
 	stdLayout.Init()
 	setting.Layouts = append(setting.Layouts, stdLayout)

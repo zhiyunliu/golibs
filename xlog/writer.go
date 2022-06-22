@@ -7,6 +7,10 @@ import (
 
 const StackSkip = 5
 
+var (
+	LogPath = "../conf/logger.json"
+)
+
 type Writer func(content ...interface{})
 
 func (l Writer) Write(p []byte) (n int, err error) {
@@ -67,8 +71,6 @@ func loadLayout(path string) {
 	_globalPause = !layouts.Status
 	AddLayout(layouts.Layouts...)
 }
-
-var LogPath = "../conf/logger.json"
 
 //进行日志配置文件初始化
 func defaultAppender() error {
