@@ -81,3 +81,8 @@ func (m XMap) SMap() SMap {
 func (m XMap) Translate(tpl string) string {
 	return xtransform.Translate(tpl, m)
 }
+
+func (m XMap) MarshalBinary() (data []byte, err error) {
+	tmp := map[string]interface{}(m)
+	return json.Marshal(tmp)
+}
