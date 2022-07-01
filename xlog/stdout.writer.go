@@ -65,6 +65,8 @@ func (f *stdWriter) Write(event *Event) {
 		f.output.Warn(event.Output)
 	case LevelError:
 		f.output.Error(event.Output)
+	case LevelPanic:
+		f.output.Panic(event.Output)
 	case LevelFatal:
 		f.output.Output("", log.Lfatal, 1, event.Output)
 	}

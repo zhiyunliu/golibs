@@ -348,14 +348,12 @@ func (l *Logger) Fatalln(v ...interface{}) {
 func (l *Logger) Panic(v ...interface{}) {
 	s := fmt.Sprint(v...)
 	l.Output("", Lpanic, 2, s)
-	panic(s)
 }
 
 // Panicf is equivalent to l.Printf() followed by a call to panic().
 func (l *Logger) Panicf(format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
 	l.Output("", Lpanic, 2, s)
-	panic(s)
 }
 
 // Panicln is equivalent to l.Println() followed by a call to panic().
