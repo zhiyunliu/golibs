@@ -33,7 +33,7 @@ func newDefaultLayouts() *layoutSetting {
 	defaultLayout := "[%time][%l][%session][%idx] %content"
 
 	fileLayout := &Layout{Type: File, LevelName: LevelAll.Name()}
-	fileLayout.Path = "../logs/%date/%level/%hh.log"
+	fileLayout.Path = "../log/%date/%level/%hh.log"
 	fileLayout.Layout = defaultLayout
 	fileLayout.Init()
 	setting.Layouts = append(setting.Layouts, fileLayout)

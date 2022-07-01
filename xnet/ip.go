@@ -2,6 +2,7 @@ package xnet
 
 import (
 	"net"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -80,4 +81,23 @@ func IsLocalIPv4(ip net.IP) bool {
 		(ip4[0] == 172 && ip4[1] >= 16 && ip4[1] <= 31) || // 172.16.0.0/12
 		(ip4[0] == 169 && ip4[1] == 254) || // 169.254.0.0/16
 		(ip4[0] == 192 && ip4[1] == 168) // 192.168.0.0/16
+}
+
+// ExtractHostPort from address
+func ExtractHostPort(addr string) (host string, port uint64, err error) {
+	var ports string
+	host, ports, err = net.SplitHostPort(addr)
+	if err != nil {
+		return
+	}
+	port, err = strconv.ParseUint(ports, 10, 16)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func IsValidIP(addr string) bool {
+	ip := net.ParseIP(addr)
+	return ip.IsGlobalUnicast() && !ip.IsInterfaceLocalMulticast()
 }
