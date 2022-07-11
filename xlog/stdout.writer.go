@@ -33,6 +33,8 @@ func newStdWriter(layout *Layout) (fa *stdWriter, err error) {
 		countChan: make(chan struct{}, 100),
 		closeChan: make(chan struct{}),
 	}
+	fa.onceLock = sync.Once{}
+	fa.lock = sync.Mutex{}
 	fa.writer = bytes.NewBufferString("")
 	fa.Level = layout.Level
 	fa.ticker = time.NewTicker(fa.interval)
@@ -75,6 +77,9 @@ func (f *stdWriter) Write(event *Event) {
 
 //Close 关闭当前appender
 func (f *stdWriter) Close() {
+	if f == nil {
+		return
+	}
 	f.onceLock.Do(func() {
 		f.flush()
 		close(f.closeChan)
