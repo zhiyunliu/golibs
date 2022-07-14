@@ -48,7 +48,9 @@ func (f *StdoutAppender) Write(layout *Layout, event *Event) (err error) {
 func (a *StdoutAppender) Close() error {
 	a.onceLock.Do(func() {
 		a.cleanTicker.Stop()
-		a.stdWriter.Close()
+		if a.stdWriter != nil {
+			a.stdWriter.Close()
+		}
 		close(a.closeChan)
 	})
 	return nil
