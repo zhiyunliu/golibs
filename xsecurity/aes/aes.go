@@ -32,7 +32,7 @@ func Encrypt(plainText string, key string, mode string, opt ...Option) (cipherTe
 	if err != nil {
 		return "", err
 	}
-	plainBytes := dataPadding(plainText, p, opts.BlockSize)
+	plainBytes := dataPadding(bytesconv.StringToBytes(plainText), p, opts.BlockSize)
 
 	cipherBytes, err := encryptData(aesCipher, plainBytes, opts.IV, encMode)
 	if err != nil {
@@ -64,9 +64,16 @@ func Decrypt(cipherText string, key string, mode string, opt ...Option) (plainTe
 		return "", err
 	}
 
-	cipherBytes := dataUnpadding(cipherText, p)
+	cipherBytes, err := base64.Decode(cipherText)
+	if err != nil {
+		return
+	}
 
 	plainBytes, err := decryptData(aesCipher, cipherBytes, opts.IV, encMode)
+	if err != nil {
+		return "", err
+	}
+	plainBytes, err = dataUnpadding(plainBytes, p)
 	if err != nil {
 		return "", err
 	}
@@ -74,30 +81,31 @@ func Decrypt(cipherText string, key string, mode string, opt ...Option) (plainTe
 	return
 }
 
-func dataPadding(plainText string, padingmode string, blockSize int) (plainBytes []byte) {
+func dataPadding(plainBytes []byte, padingmode string, blockSize int) (paddingBytes []byte) {
 	switch padingmode {
 	case padding.PaddingPkcs7:
-		plainBytes = padding.PKCS7Padding(bytesconv.StringToBytes(plainText))
+		paddingBytes = padding.PKCS7Padding(plainBytes)
 	case padding.PaddingPkcs5:
-		plainBytes = padding.PKCS5Padding(bytesconv.StringToBytes(plainText), blockSize)
+		paddingBytes = padding.PKCS5Padding(plainBytes, blockSize)
 	case padding.PaddingZero:
-		plainBytes = padding.ZeroPadding(bytesconv.StringToBytes(plainText), blockSize)
+		paddingBytes = padding.ZeroPadding(plainBytes, blockSize)
 	default:
-		plainBytes = bytesconv.StringToBytes(plainText)
+		paddingBytes = plainBytes
 	}
 	return
 }
 
-func dataUnpadding(cipherText string, padingmode string) (cipherBytes []byte) {
+func dataUnpadding(plainBytes []byte, padingmode string) (cipherBytes []byte, err error) {
+
 	switch padingmode {
 	case padding.PaddingPkcs7:
-		cipherBytes = padding.PKCS7UnPadding(bytesconv.StringToBytes(cipherText))
+		cipherBytes = padding.PKCS7UnPadding(plainBytes)
 	case padding.PaddingPkcs5:
-		cipherBytes = padding.PKCS5UnPadding(bytesconv.StringToBytes(cipherText))
+		cipherBytes = padding.PKCS5UnPadding(plainBytes)
 	case padding.PaddingZero:
-		cipherBytes = padding.ZeroUnPadding(bytesconv.StringToBytes(cipherText))
+		cipherBytes = padding.ZeroUnPadding(plainBytes)
 	default:
-		cipherBytes = bytesconv.StringToBytes(cipherText)
+		cipherBytes = plainBytes
 	}
 	return
 }
