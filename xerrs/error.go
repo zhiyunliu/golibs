@@ -16,8 +16,9 @@ type Xerror interface {
 }
 
 type XErr struct {
-	Code int
-	Data xtypes.XMap
+	Code   int
+	Data   xtypes.XMap
+	Ignore bool
 	error
 }
 

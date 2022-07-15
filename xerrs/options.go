@@ -15,3 +15,9 @@ func WithData(data xtypes.XMap) Option {
 		e.Data = data
 	}
 }
+
+func WithIgnore() Option {
+	return func(e *XErr) {
+		e.Ignore = true
+	}
+}
