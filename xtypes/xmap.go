@@ -91,7 +91,7 @@ func (m XMap) MarshalBinary() (data []byte, err error) {
 
 func (m XMap) GetInt(key string) (int, error) {
 	tmp, ok := m[key]
-	if !ok {
+	if !ok || tmp == nil {
 		return 0, nil
 	}
 
@@ -118,7 +118,7 @@ func (m XMap) GetInt(key string) (int, error) {
 
 func (m XMap) GetInt64(key string) (int64, error) {
 	tmp, ok := m[key]
-	if !ok {
+	if !ok || tmp == nil {
 		return 0, nil
 	}
 
@@ -142,7 +142,7 @@ func (m XMap) GetInt64(key string) (int64, error) {
 
 func (m XMap) GetFloat64(key string) (float64, error) {
 	tmp, ok := m[key]
-	if !ok {
+	if !ok || tmp == nil {
 		return 0, nil
 	}
 	switch val := tmp.(type) {
