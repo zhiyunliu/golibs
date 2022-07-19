@@ -35,6 +35,7 @@ type Event struct {
 	Name    string
 	Level   Level
 	Idx     int32
+	SrvType string
 	LogTime time.Time
 	Session string
 	Content string
@@ -43,13 +44,14 @@ type Event struct {
 }
 
 //NewEvent 构建日志事件
-func NewEvent(name string, level Level, session string, content string, tags map[string]string) *Event {
+func NewEvent(name string, level Level, session string, srvType string, content string, tags map[string]string) *Event {
 	e := eventPool.Get().(*Event)
 	e.LogTime = time.Now()
 	e.Level = level
 	e.Name = name
 	e.Session = session
 	e.Content = content
+	e.SrvType = srvType
 	e.Tags = tags
 	return e
 }
@@ -69,6 +71,8 @@ func (e *Event) Transform(template string, isJson bool) string {
 			return appName
 		case "nm":
 			return e.Name
+		case "srvtype":
+			return e.SrvType
 		case "session":
 			return e.Session
 		case "date":

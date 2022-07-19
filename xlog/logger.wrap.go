@@ -167,7 +167,7 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 	if _hasClosed {
 		return
 	}
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, fmt.Sprintf(format, args...), logger.opts.data)
+	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprintf(format, args...), logger.opts.data)
 	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
 	_writerPipes.Write(event)
@@ -182,7 +182,7 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 		return
 	}
 
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, getString(args...), logger.opts.data)
+	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, getString(args...), logger.opts.data)
 	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
 	_writerPipes.Write(event)

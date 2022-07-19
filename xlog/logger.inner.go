@@ -21,19 +21,19 @@ func newSysLogger() *defaultLogger {
 	}
 }
 func (s *defaultLogger) Error(content ...interface{}) {
-	evt := NewEvent("sys", LevelError, session.Create(), fmt.Sprint(content...), nil)
+	evt := NewEvent("sys", LevelError, session.Create(), fmt.Sprint(content...), "sys", nil)
 	s.appender.Write(s.layout, evt)
 }
 func (s *defaultLogger) Errorf(f string, content ...interface{}) {
-	evt := NewEvent("sys", LevelError, session.Create(), fmt.Sprintf(f, content...), nil)
+	evt := NewEvent("sys", LevelError, session.Create(), fmt.Sprintf(f, content...), "sys", nil)
 	s.appender.Write(s.layout, evt)
 }
 
 func (s *defaultLogger) Panic(content ...interface{}) {
-	evt := NewEvent("sys", LevelPanic, session.Create(), fmt.Sprint(content...), nil)
+	evt := NewEvent("sys", LevelPanic, session.Create(), fmt.Sprint(content...), "sys", nil)
 	s.appender.Write(s.layout, evt)
 }
 func (s *defaultLogger) Panicf(f string, content ...interface{}) {
-	evt := NewEvent("sys", LevelPanic, session.Create(), fmt.Sprintf(f, content...), nil)
+	evt := NewEvent("sys", LevelPanic, session.Create(), fmt.Sprintf(f, content...), "sys", nil)
 	s.appender.Write(s.layout, evt)
 }
