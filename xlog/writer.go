@@ -8,7 +8,8 @@ import (
 const StackSkip = 5
 
 var (
-	LogPath = "../conf/logger.json"
+	LogPath  = "../conf/logger.json"
+	_etcPath = "../etc/logger.json"
 )
 
 type Writer func(content ...interface{})
@@ -54,7 +55,19 @@ func asyncWrite(event *Event) {
 	_mainWriter.Log(event)
 }
 
-func loadLayout(path string) {
+func loadLayout(paths ...string) {
+	if len(paths) <= 0 {
+		return
+	}
+
+	var path string = paths[0]
+	for _, tmp := range paths {
+		if xfile.Exists(tmp) {
+			path = tmp
+			break
+		}
+	}
+
 	if !xfile.Exists(path) {
 		err := Encode(path)
 		if err != nil {
@@ -76,7 +89,7 @@ func loadLayout(path string) {
 func defaultAppender() error {
 	AddAppender(NewFileAppender())
 	AddAppender(NewStudoutAppender())
-	loadLayout(LogPath)
+	loadLayout(LogPath, _etcPath)
 	return nil
 }
 
