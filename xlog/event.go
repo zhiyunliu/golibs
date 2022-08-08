@@ -14,11 +14,13 @@ import (
 	"github.com/zhiyunliu/golibs/xnet"
 )
 
-var eventPool *sync.Pool
-var appName string = filepath.Base(os.Args[0])
-var localip string
-var curPid int
-var word, _ = regexp.Compile(`%\w+`)
+var (
+	eventPool *sync.Pool
+	appName   string = filepath.Base(os.Args[0])
+	localip   string
+	curPid    int
+	word, _   = regexp.Compile(`%\w+`)
+)
 
 func init() {
 	eventPool = &sync.Pool{
@@ -58,7 +60,7 @@ func NewEvent(name string, level Level, session string, srvType string, content 
 
 //Format 获取转换后的日志事件
 func (e *Event) Format(layout *Layout) *Event {
-	e.Output = e.Transform(layout.Layout, layout.IsJsonLayout)
+	e.Output = e.Transform(layout.Content, layout.isJson)
 	return e
 }
 

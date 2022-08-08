@@ -51,6 +51,7 @@ func (f *fileWriter) Write(event *Event) {
 	if f.Level > event.Level {
 		return
 	}
+	event = event.Format(f.layout)
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	if f.writeCount > 10000 {

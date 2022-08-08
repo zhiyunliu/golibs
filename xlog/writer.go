@@ -1,15 +1,15 @@
 package xlog
 
 import (
-	"github.com/zhiyunliu/golibs/xfile"
+	"sync"
+
 	"github.com/zhiyunliu/golibs/xstack"
 )
 
 const StackSkip = 5
 
 var (
-	LogPath  = "../conf/logger.json"
-	_etcPath = "../etc/logger.json"
+	_cfglocker = sync.Mutex{}
 )
 
 type Writer func(content ...interface{})
@@ -26,18 +26,8 @@ func getStack() string {
 //默认appender写入器
 var _mainWriter = newlogWriter()
 
-//AddAppender 添加appender
-func AddAppender(appender Appender) {
-	_mainWriter.Attach(appender)
-}
-
-//RemoveAppender 移除Appender
-func RemoveAppender(name string) {
-	_mainWriter.Detach(name)
-}
-
-//RemoveAppender 移除Appender
-func Appenders() []string {
+//AppenderList 获取列表
+func AppenderList() []string {
 	result := make([]string, len(_mainWriter.appenders))
 	idx := 0
 	for key := range _mainWriter.appenders {
@@ -46,51 +36,34 @@ func Appenders() []string {
 	return result
 }
 
-//AddLayout 添加日志输出配置
-func AddLayout(l ...*Layout) {
-	_mainWriter.Append(l...)
-}
-
 func asyncWrite(event *Event) {
+	if !_defaultParam.inited {
+		reconfigLogWriter(_defaultParam)
+	}
 	_mainWriter.Log(event)
 }
 
-func loadLayout(paths ...string) {
-	if len(paths) <= 0 {
-		return
+func reconfigLogWriter(param *Param) error {
+	_cfglocker.Lock()
+	defer _cfglocker.Unlock()
+	if param.inited {
+		return nil
 	}
+	param.inited = true
 
-	var path string = paths[0]
-	for _, tmp := range paths {
-		if xfile.Exists(tmp) {
-			path = tmp
-			break
-		}
-	}
-
-	if !xfile.Exists(path) {
-		err := Encode(path)
-		if err != nil {
-			sysLogger.Errorf("创建日志配置文件失败 %v", err)
-			return
-		}
-	}
-
-	layouts, err := Decode(path)
+	layoutSetting, err := loadLayout(param.ConfigPath, _etcPath)
 	if err != nil {
-		sysLogger.Errorf("读取配置文件失败 %v", err)
-		return
+		return err
 	}
-	_globalPause = !layouts.Status
-	AddLayout(layouts.Layouts...)
-}
 
-//进行日志配置文件初始化
-func defaultAppender() error {
-	AddAppender(NewFileAppender())
-	AddAppender(NewStudoutAppender())
-	loadLayout(LogPath, _etcPath)
+	newAppenderMap := make(map[string]Appender)
+	for apn, layout := range layoutSetting.Layout {
+		if tmp, ok := _appenderCache.Load(apn); ok {
+			newAppenderMap[apn] = tmp.(AppenderBuilder).Build(layout)
+		}
+	}
+
+	_mainWriter.RebuildAppender(newAppenderMap)
+
 	return nil
 }
-
-var _ = defaultAppender()

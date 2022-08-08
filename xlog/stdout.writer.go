@@ -26,7 +26,7 @@ type stdWriter struct {
 }
 
 //newwriter 构建基于文件流的日志输出对象,使用带缓冲区的文件写入，缓存区达到4K或每隔3秒写入一次文件。
-func newStdWriter(layout *Layout) (fa *stdWriter, err error) {
+func newStdWriter(layout *Layout) (fa *stdWriter) {
 	fa = &stdWriter{
 		layout:    layout,
 		interval:  time.Microsecond * 100,
@@ -51,6 +51,7 @@ func (f *stdWriter) Write(event *Event) {
 	if f.Level > event.Level {
 		return
 	}
+	event = event.Format(f.layout)
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	if f.writeCount > 10000 {
