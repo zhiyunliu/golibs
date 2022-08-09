@@ -1,6 +1,7 @@
 package xlog
 
 import (
+	"log"
 	"sync"
 
 	"github.com/zhiyunliu/golibs/xstack"
@@ -38,7 +39,10 @@ func AppenderList() []string {
 
 func asyncWrite(event *Event) {
 	if !_defaultParam.inited {
-		reconfigLogWriter(_defaultParam)
+		err := reconfigLogWriter(_defaultParam)
+		if err != nil {
+			log.Println("reconfigLogWriter.asyncWrite:", err)
+		}
 	}
 	_mainWriter.Log(event)
 }
@@ -55,7 +59,6 @@ func reconfigLogWriter(param *Param) error {
 	if err != nil {
 		return err
 	}
-
 	newAppenderMap := make(map[string]Appender)
 	for apn, layout := range layoutSetting.Layout {
 		if tmp, ok := _appenderCache.Load(apn); ok {
@@ -64,6 +67,5 @@ func reconfigLogWriter(param *Param) error {
 	}
 
 	_mainWriter.RebuildAppender(newAppenderMap)
-
 	return nil
 }

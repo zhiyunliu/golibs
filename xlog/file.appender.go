@@ -36,7 +36,7 @@ func (b *fileApderBuilder) Name() string {
 	return File
 }
 func (b *fileApderBuilder) DefaultLayout() *Layout {
-	return &Layout{LevelName: LevelInfo.Name(), Path: "../log/%date/%level/%hh.log", Content: _defaultLayout}
+	return &Layout{LevelName: LevelInfo.Name(), Path: _logfilePath, Content: _defaultLayout}
 }
 func (b *fileApderBuilder) Build(layout *Layout) Appender {
 	a := &FileAppender{

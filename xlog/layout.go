@@ -45,7 +45,12 @@ func Encode(path string, setting *layoutSetting) error {
 
 //Decode 从配置文件中读取配置信息
 func Decode(path string) (*layoutSetting, error) {
-	l := &layoutSetting{}
+	l := &layoutSetting{
+		Enable: true,
+		Layout: map[string]*Layout{
+			File: &Layout{LevelName: LevelInfo.FullName(), Path: _logfilePath, Content: _defaultLayout},
+		},
+	}
 	fileBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err

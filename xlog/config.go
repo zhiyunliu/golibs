@@ -1,12 +1,15 @@
 package xlog
 
+import "log"
+
 var (
-	_logPath = "../conf/logger.json"
-	_etcPath = "../etc/logger.json"
+	_confPath    = "../conf/logger.json"
+	_etcPath     = "../etc/logger.json"
+	_logfilePath = "../log/%date/%level/%hh.log"
 
 	_defaultParam = &Param{
 		inited:     false,
-		ConfigPath: _logPath,
+		ConfigPath: _confPath,
 	}
 )
 
@@ -21,5 +24,8 @@ func Config(p *Param) {
 	if p.ConfigPath == "" {
 		p.ConfigPath = _defaultParam.ConfigPath
 	}
-	reconfigLogWriter(p)
+	err := reconfigLogWriter(p)
+	if err != nil {
+		log.Println("reconfigLogWriter.Config:", err)
+	}
 }
