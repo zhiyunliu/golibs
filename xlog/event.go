@@ -15,21 +15,24 @@ import (
 )
 
 var (
+	curPid string
+
 	eventPool *sync.Pool
 	appName   string = filepath.Base(os.Args[0])
 	localip   string
-	curPid    int
 	word, _   = regexp.Compile(`%\w+`)
 )
 
 func init() {
+	curPid = strconv.FormatInt(int64(os.Getpid()), 10)
+
 	eventPool = &sync.Pool{
 		New: func() interface{} {
 			return &Event{}
 		},
 	}
+
 	localip = xnet.GetLocalIP()
-	curPid = os.Getpid()
 }
 
 //Event 日志信息
@@ -71,6 +74,10 @@ func (e *Event) Transform(template string, isJson bool) string {
 		switch key {
 		case "app":
 			return appName
+		case "pid":
+			return curPid
+		case "ip":
+			return localip
 		case "nm":
 			return e.Name
 		case "srvtype":
@@ -79,6 +86,8 @@ func (e *Event) Transform(template string, isJson bool) string {
 			return e.Session
 		case "date":
 			return e.LogTime.Format("20060102")
+		case "ndate":
+			return e.LogTime.Format("2006-01-02")
 		case "time":
 			return e.LogTime.Format("15:04:05.000000")
 		case "datetime":
@@ -103,8 +112,6 @@ func (e *Event) Transform(template string, isJson bool) string {
 			return e.Level.Name()
 		case "idx":
 			return strconv.FormatInt(int64(e.Idx), 10)
-		case "pid":
-			return strconv.FormatInt(int64(curPid), 10)
 		case "n":
 			return "\n"
 		case "content":
@@ -119,13 +126,8 @@ func (e *Event) Transform(template string, isJson bool) string {
 				return bytesconv.BytesToString(buff)
 			}
 			return e.Content
-		case "ip":
-			return localip
-		case "tags":
-			bytes, _ := json.Marshal(e.Tags)
-			return bytesconv.BytesToString(bytes)
 		default:
-			return ""
+			return Transform(key, e, isJson)
 		}
 	})
 }

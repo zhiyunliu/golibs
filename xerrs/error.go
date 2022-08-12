@@ -45,8 +45,7 @@ func (a *XErr) String() string {
 
 //GetCode 获取错误码
 func (a *XErr) Error() string {
-	bytes, _ := json.Marshal(a)
-	return bytesconv.BytesToString(bytes)
+	return a.Error()
 }
 
 func (a *XErr) Is(e error) bool {

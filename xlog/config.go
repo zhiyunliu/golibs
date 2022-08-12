@@ -9,7 +9,7 @@ var (
 
 	_defaultParam = &Param{
 		inited:     false,
-		ConfigPath: _confPath,
+		ConfigPath: _etcPath,
 	}
 )
 
