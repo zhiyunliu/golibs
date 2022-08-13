@@ -5,7 +5,7 @@ import "log"
 var (
 	_confPath    = "../conf/logger.json"
 	_etcPath     = "../etc/logger.json"
-	_logfilePath = "../log/%date/%level/%hh.log"
+	_logfilePath = "../log/%ndate/%level/%hh.log"
 
 	_defaultParam = &Param{
 		inited:     false,

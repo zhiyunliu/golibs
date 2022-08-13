@@ -7,7 +7,7 @@ import (
 
 //CreateFile 根据文件路径(相对或绝对路径)创建文件，如果文件所在的文件夹不存在则自动创建
 func CreateFile(path string) (f *os.File, err error) {
-	absPath, err := filepath.Abs(path)
+	absPath, err := getAbsFilePath(path)
 	if err != nil {
 		return
 	}
@@ -21,7 +21,7 @@ func CreateFile(path string) (f *os.File, err error) {
 
 //ReadFile 根据文件路径(相对或绝对路径)创建文件，如果文件所在的文件夹不存在则自动创建
 func ReadFile(path string) (f *os.File, err error) {
-	absPath, err := filepath.Abs(path)
+	absPath, err := getAbsFilePath(path)
 	if err != nil {
 		return
 	}
@@ -31,4 +31,9 @@ func ReadFile(path string) (f *os.File, err error) {
 		return
 	}
 	return os.OpenFile(absPath, os.O_WRONLY|os.O_APPEND, 0666)
+}
+
+func getAbsFilePath(path string) (absPath string, err error) {
+	absPath, err = filepath.Abs(path)
+	return
 }

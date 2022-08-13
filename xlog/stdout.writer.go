@@ -29,7 +29,7 @@ type stdWriter struct {
 func newStdWriter(layout *Layout) (fa *stdWriter) {
 	fa = &stdWriter{
 		layout:    layout,
-		interval:  time.Microsecond * 100,
+		interval:  time.Microsecond * 50,
 		countChan: make(chan struct{}, 100),
 		closeChan: make(chan struct{}),
 	}
