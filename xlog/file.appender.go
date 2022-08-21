@@ -12,7 +12,7 @@ const File string = "file"
 
 const (
 	_clearTimeRange = time.Minute * 1
-	_clearInterval  = time.Second * 1
+	_clearInterval  = time.Second * 30
 )
 
 //FileAppender 文件FileAppender
@@ -100,17 +100,17 @@ func (a *FileAppender) clean() {
 }
 
 func (a *FileAppender) cleanWriters() {
-	for item := range a.writers.IterBuffered() {
-		a.writers.RemoveCb(item.Key, func(key string, value interface{}, exists bool) bool {
-			if !exists {
-				return exists
-			}
-			w := value.(*fileWriter)
-			if time.Since(w.lastWrite) >= _clearTimeRange {
-				w.Close()
-				return true
-			}
-			return false
-		})
+	remvesList := []string{}
+	a.writers.IterCb(func(key string, value interface{}) {
+		lastwrite := value.(*fileWriter).lastWrite
+		if time.Since(lastwrite) >= _clearTimeRange {
+			value.(*fileWriter).Close()
+			remvesList = append(remvesList, key)
+			return
+		}
+	})
+
+	for i := range remvesList {
+		a.writers.Remove(remvesList[i])
 	}
 }
