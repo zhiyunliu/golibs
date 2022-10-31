@@ -1,7 +1,6 @@
 package xpath
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -9,7 +8,6 @@ import (
 
 	cmap "github.com/orcaman/concurrent-map"
 	"github.com/zhiyunliu/golibs/bytesconv"
-	"github.com/zhiyunliu/golibs/xsecurity/md5"
 )
 
 var specials = `~!@#$%^&*()_+-=<>?:"{}|,./;'[]\`
@@ -92,26 +90,38 @@ func NewMatch(pathList []string, opts ...Option) *Match {
 	return m
 }
 
+func (m *Match) CanUseCache() bool {
+	return m.cache.enbale
+}
+
 //Match Match
 func (m *Match) Match(path string, spls ...string) (match bool, pattern string) {
 	sep := "/"
 	if len(spls) > 0 {
 		sep = spls[0]
 	}
-	key := m.buildCacheKey(path, sep)
-	if val, ok := m.cache.Get(key); ok {
-		return true, val.(string)
+
+	cacheKey := ""
+	if m.CanUseCache() {
+		cacheKey = m.buildCacheKey(path, sep)
+		if val, ok := m.cache.Get(cacheKey); ok {
+			return true, val.(string)
+		}
 	}
 
 	for i, u := range m.all {
 		if strings.EqualFold(u, path) {
-			m.cache.SetIfAbsent(key, u)
+			if m.CanUseCache() {
+				m.cache.SetIfAbsent(cacheKey, u)
+			}
 			return true, u
 		}
 		regp := m.getRegexp(u, i, sep)
 		match = regp.Match(bytesconv.StringToBytes(path))
 		if match {
-			m.cache.SetIfAbsent(key, u)
+			if m.CanUseCache() {
+				m.cache.SetIfAbsent(cacheKey, u)
+			}
 			return match, u
 		}
 	}
@@ -119,7 +129,7 @@ func (m *Match) Match(path string, spls ...string) (match bool, pattern string) 
 }
 
 func (m *Match) buildCacheKey(path, sep string) string {
-	return md5.Str(fmt.Sprintf("%s:%s", sep, path))
+	return sep + ":" + path
 }
 
 func (m *Match) getRegexp(u string, idx int, sep string) *regexp.Regexp {
