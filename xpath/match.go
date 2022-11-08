@@ -69,7 +69,7 @@ func (w *matchCacheWrap) SetIfAbsent(key string, val interface{}) {
 	if !w.enbale {
 		return
 	}
-	w.SetIfAbsent(key, val)
+	w.cacheMap.SetIfAbsent(key, val)
 }
 
 //NewMatch 构建模糊匹配缓存查找管理器
