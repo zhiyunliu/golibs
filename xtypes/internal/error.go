@@ -15,8 +15,8 @@ func (e *XMapScanError) Error() string {
 		return "XMap: Scan(nil)"
 	}
 
-	// if e.Type.Kind() != reflect.Pointer {
-	// 	return "XMap: Scan(non-pointer " + e.Type.String() + ")"
-	// }
+	if e.Type.Kind() != reflect.Ptr {
+		return "XMap: Scan(non-pointer " + e.Type.String() + ")"
+	}
 	return "XMap: Scan(nil " + e.Type.String() + ")"
 }

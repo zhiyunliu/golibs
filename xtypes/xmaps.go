@@ -33,7 +33,7 @@ func (ms XMaps) Get(idx int) XMap {
 
 func (ms XMaps) Scan(obj interface{}) error {
 	rv := reflect.ValueOf(obj)
-	if rv.Kind() != reflect.Pointer || rv.IsNil() {
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return &internal.XMapScanError{Type: reflect.TypeOf(obj)}
 	}
 
