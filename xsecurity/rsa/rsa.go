@@ -24,20 +24,20 @@ var hashFunc sync.Map
 
 func init() {
 	hashFunc = sync.Map{}
-	hashFunc.Store("sha1", func() (crypto.Hash, hash.Hash) {
+	hashFunc.Store("sha1", mapItem(func() (crypto.Hash, hash.Hash) {
 		return crypto.SHA1, sha1.New()
-	})
-	hashFunc.Store("sha256", func() (crypto.Hash, hash.Hash) {
+	}))
+	hashFunc.Store("sha256", mapItem(func() (crypto.Hash, hash.Hash) {
 		return crypto.SHA256, sha256.New()
-	})
-	hashFunc.Store("md5", func() (crypto.Hash, hash.Hash) {
+	}))
+	hashFunc.Store("md5", mapItem(func() (crypto.Hash, hash.Hash) {
 		return crypto.MD5, md5.New()
-	})
+	}))
 }
 
 func RegHashMode(mode string, creator func() (crypto.Hash, hash.Hash)) {
 	mode = strings.ToLower(mode)
-	hashFunc.Store(mode, creator)
+	hashFunc.Store(mode, mapItem(creator))
 }
 
 //GenerateKey 生成基于pkcs1的rsa私、公钥对
