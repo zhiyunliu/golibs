@@ -128,6 +128,14 @@ func encryptData(aespher cipher.Block, plainBytes []byte, iv []byte, encMode str
 	case strings.EqualFold(encMode, "ofb"):
 		stream = cipher.NewOFB(aespher, iv)
 		stream.XORKeyStream(cipherBytes, plainBytes)
+	case strings.EqualFold(encMode, "ecb"):
+		blockSize := aespher.BlockSize()
+		if len(plainBytes)%blockSize != 0 {
+			return nil, fmt.Errorf("aes.encrypt.明文长度不是块大小的整数倍:%d", blockSize)
+		}
+		for i := 0; i < len(plainBytes); i += blockSize {
+			aespher.Encrypt(cipherBytes[i:i+blockSize], plainBytes[i:i+blockSize])
+		}
 	default:
 		return nil, fmt.Errorf("aes.encrypt.不支持的加密模式:%v", encMode)
 	}
@@ -152,6 +160,14 @@ func decryptData(aespher cipher.Block, cipherBytes []byte, iv []byte, encMode st
 	case strings.EqualFold(encMode, "ofb"):
 		stream = cipher.NewOFB(aespher, iv)
 		stream.XORKeyStream(plainBytes, cipherBytes)
+	case strings.EqualFold(encMode, "ecb"):
+		blockSize := aespher.BlockSize()
+		if len(cipherBytes)%blockSize != 0 {
+			return nil, fmt.Errorf("aes.decrypt.密文长度不是块大小的整数倍:%d", blockSize)
+		}
+		for i := 0; i < len(cipherBytes); i += blockSize {
+			aespher.Decrypt(plainBytes[i:i+blockSize], cipherBytes[i:i+blockSize])
+		}
 	default:
 		return nil, fmt.Errorf("aes.decrypt.不支持的加密模式:%v", encMode)
 	}

@@ -41,6 +41,9 @@ func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
 // PKCS5UnPadding 去除PKCS5的补码
 func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)
+	if length == 0 {
+		return origData
+	}
 	// 去掉最后一个字节 unpadding 次
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
@@ -58,12 +61,15 @@ func PKCS7Padding(data []byte) []byte {
 // PKCS7UnPadding 去除PKCS7的补码
 func PKCS7UnPadding(data []byte) []byte {
 	length := len(data)
+	if length == 0 {
+		return data
+	}
 	// 去掉最后一个字节 unpadding 次
 	unpadding := int(data[length-1])
 	return data[:(length - unpadding)]
 }
 
-//GetModePadding 解析加密模式和填充模式
+// GetModePadding 解析加密模式和填充模式
 func GetSecretMode(name string) (mode, padding string, err error) {
 	names := strings.Split(name, "/")
 	if len(names) != 2 {
