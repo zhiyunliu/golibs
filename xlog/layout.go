@@ -3,12 +3,12 @@ package xlog
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/zhiyunliu/golibs/xfile"
 )
 
-//Layout 输出器
+// Layout 输出器
 type Layout struct {
 	//Type      string `json:"type"`
 	LevelName string `json:"level" valid:"in(off|info|warn|error|panic|fatal|debug|all)"`
@@ -28,7 +28,7 @@ type layoutSetting struct {
 	Layout map[string]*Layout `json:"layout"`
 }
 
-//Encode 将当前配置内容保存到文件中
+// Encode 将当前配置内容保存到文件中
 func Encode(path string, setting *layoutSetting) error {
 	f, err := xfile.CreateFile(path)
 	if err != nil {
@@ -43,15 +43,15 @@ func Encode(path string, setting *layoutSetting) error {
 	return nil
 }
 
-//Decode 从配置文件中读取配置信息
+// Decode 从配置文件中读取配置信息
 func Decode(path string) (*layoutSetting, error) {
 	l := &layoutSetting{
 		Enable: true,
 		Layout: map[string]*Layout{
-			File: &Layout{LevelName: LevelInfo.FullName(), Path: _logfilePath, Content: _defaultLayout},
+			File: {LevelName: LevelInfo.FullName(), Path: _logfilePath, Content: _defaultLayout},
 		},
 	}
-	fileBytes, err := ioutil.ReadFile(path)
+	fileBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
