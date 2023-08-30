@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/zhiyunliu/golibs/bytesconv"
-	"github.com/zhiyunliu/golibs/xnet"
 )
 
 var (
@@ -19,8 +18,7 @@ var (
 
 	eventPool *sync.Pool
 	appName   string = filepath.Base(os.Args[0])
-	localip   string
-	word, _   = regexp.Compile(`%\w+`)
+	word, _          = regexp.Compile(`%\w+`)
 )
 
 func init() {
@@ -31,11 +29,9 @@ func init() {
 			return &Event{}
 		},
 	}
-
-	localip = xnet.GetLocalIP()
 }
 
-//Event 日志信息
+// Event 日志信息
 type Event struct {
 	Name    string
 	Level   Level
@@ -48,7 +44,7 @@ type Event struct {
 	Tags    map[string]string
 }
 
-//NewEvent 构建日志事件
+// NewEvent 构建日志事件
 func NewEvent(name string, level Level, session string, srvType string, content string, tags map[string]string) *Event {
 	e := eventPool.Get().(*Event)
 	e.LogTime = time.Now()
@@ -61,7 +57,7 @@ func NewEvent(name string, level Level, session string, srvType string, content 
 	return e
 }
 
-//Format 获取转换后的日志事件
+// Format 获取转换后的日志事件
 func (e *Event) Format(layout *Layout) *Event {
 	e.Output = e.Transform(layout.Content, layout.isJson)
 	return e
@@ -76,8 +72,6 @@ func (e *Event) Transform(template string, isJson bool) string {
 			return appName
 		case "pid":
 			return curPid
-		case "ip":
-			return localip
 		case "nm":
 			return e.Name
 		case "srvtype":
@@ -132,7 +126,7 @@ func (e *Event) Transform(template string, isJson bool) string {
 	})
 }
 
-//Close 关闭回收日志
+// Close 关闭回收日志
 func (e *Event) Close() {
 	eventPool.Put(e)
 }
