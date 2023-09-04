@@ -16,9 +16,10 @@ type List struct {
 }
 
 type Node struct {
-	list       *List
-	Value      interface{}
-	next, prev *Node
+	list  *List
+	Value any
+	next  *Node
+	prev  *Node
 }
 
 func (n *Node) Remove() {
@@ -55,7 +56,7 @@ func (l *List) Length() int {
 	return l.length
 }
 
-func (l *List) Append(items ...interface{}) *List {
+func (l *List) Append(items ...any) *List {
 
 	for _, item := range items {
 		var n *Node
