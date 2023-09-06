@@ -29,7 +29,8 @@ var (
 		{
 			regexp: _portRegexpPattern1,
 			buildAddr: func(logger xlog.Logger, localIp string, subList []string) (string, error) {
-				return fmt.Sprintf("%s:%s", localIp, subList[0]), nil
+				// 监听所有网卡的端口
+				return fmt.Sprintf("%s:%s", "", subList[0]), nil
 			},
 		},
 		{
@@ -44,7 +45,8 @@ var (
 					return "", err
 				}
 				nport := randPortPicker(logger, localIp, begin, end, 1)
-				return fmt.Sprintf("%s:%d", localIp, nport), nil
+				// 监听所有网卡的端口
+				return fmt.Sprintf("%s:%d", "", nport), nil
 			},
 		},
 		{
@@ -73,7 +75,8 @@ var (
 				if nport == 0 {
 					return "", fmt.Errorf("未获取到有效的端口,请检查配置")
 				}
-				return fmt.Sprintf("%s:%d", localIp, nport), nil
+				// 监听所有网卡的端口
+				return fmt.Sprintf("%s:%d", "", nport), nil
 			},
 		},
 	}
