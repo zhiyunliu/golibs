@@ -18,10 +18,10 @@ type Engine struct {
 	onceLock sync.Once
 }
 
-//执行的任务函数
+// 执行的任务函数
 type TaskCallback func(args ...interface{})
 
-//任务
+// 任务
 type dealyTask struct {
 	//循环次数
 	cycleCnt int
@@ -30,7 +30,7 @@ type dealyTask struct {
 	params   []interface{}
 }
 
-//创建一个延迟消息
+// 创建一个延迟消息
 func NewEngine(slotCount int) *Engine {
 	dm := &Engine{
 		slotCount: slotCount,
@@ -44,20 +44,20 @@ func NewEngine(slotCount int) *Engine {
 	return dm
 }
 
-//启动延迟消息
+// 启动延迟消息
 func (e *Engine) Start() {
 	go e.taskLoop()
 	<-e.closed
 }
 
-//关闭延迟消息
+// 关闭延迟消息
 func (e *Engine) Close() {
 	e.onceLock.Do(func() {
 		close(e.closed)
 	})
 }
 
-//处理每1秒的任务
+// 处理每1秒的任务
 func (e *Engine) taskLoop() {
 	ticker := time.NewTicker(time.Second)
 	for {
@@ -85,7 +85,7 @@ func (e *Engine) taskLoop() {
 	}
 }
 
-//添加任务
+// 添加任务
 func (e *Engine) AddTask(seconds uint, callback TaskCallback, params ...interface{}) error {
 	slotIdx := (e.curIndex + seconds) % uint(e.slotCount)
 	//把任务加入tasks中
@@ -95,4 +95,14 @@ func (e *Engine) AddTask(seconds uint, callback TaskCallback, params ...interfac
 		params:   params,
 	})
 	return nil
+}
+
+// 任务分布
+func (e *Engine) GetTaskDistribution() (curIdx int, cnt []int) {
+	curIdx = int(e.curIndex)
+	cnt = make([]int, e.slotCount)
+	for i := range e.slots {
+		cnt[i] = e.slots[i].Length()
+	}
+	return
 }
