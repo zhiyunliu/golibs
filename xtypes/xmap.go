@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xtransform"
 )
 
 type XMap map[string]interface{}
 
-//Keys 从对象中获取数据值，如果不是字符串则返回空
+// Keys 从对象中获取数据值，如果不是字符串则返回空
 func (m XMap) Keys() []string {
 	keys := make([]string, len(m))
 	idx := 0
@@ -20,20 +21,20 @@ func (m XMap) Keys() []string {
 	return keys
 }
 
-//Merge 合并
+// Merge 合并
 func (m XMap) Merge(r XMap) {
 	for k, v := range r {
 		m[k] = v
 	}
 }
 
-//Get 获取指定元素的值
+// Get 获取指定元素的值
 func (m XMap) Get(name string) (interface{}, bool) {
 	v, ok := m[name]
 	return v, ok
 }
 
-//Scan 以json 标签进行序列化
+// Scan 以json 标签进行序列化
 func (m XMap) Scan(obj interface{}) error {
 	bytes, _ := json.Marshal(m)
 	return json.Unmarshal(bytes, obj)
@@ -64,7 +65,7 @@ func (m XMap) MarshalBinary() (data []byte, err error) {
 	return json.Marshal(tmp)
 }
 
-//Get 获取指定元素的Bool值
+// Get 获取指定元素的Bool值
 func (m XMap) GetBool(name string) bool {
 	v, ok := m[name]
 	if !ok {
@@ -73,7 +74,7 @@ func (m XMap) GetBool(name string) bool {
 	return GetBool(v)
 }
 
-//Get 获取指定元素的值
+// Get 获取指定元素的值
 func (m XMap) GetString(name string) string {
 	v, ok := m[name]
 	if !ok {
@@ -106,4 +107,18 @@ func (m XMap) GetFloat64(key string) (float64, error) {
 		return 0, nil
 	}
 	return GetFloat64(tmp)
+}
+
+func (m *XMap) MapScan(obj interface{}) error {
+	if obj == nil {
+		return nil
+	}
+
+	switch v := obj.(type) {
+	case []byte:
+		return json.Unmarshal(v, m)
+	case string:
+		return json.Unmarshal(bytesconv.StringToBytes(v), m)
+	}
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xtransform"
 )
 
@@ -62,4 +63,18 @@ func (m SMap) Translate(tpl string) string {
 func (m SMap) MarshalBinary() (data []byte, err error) {
 	tmp := map[string]string(m)
 	return json.Marshal(tmp)
+}
+
+func (m *SMap) MapScan(obj interface{}) error {
+	if obj == nil {
+		return nil
+	}
+
+	switch v := obj.(type) {
+	case []byte:
+		return json.Unmarshal(v, m)
+	case string:
+		return json.Unmarshal(bytesconv.StringToBytes(v), m)
+	}
+	return nil
 }
