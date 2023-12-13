@@ -1,10 +1,8 @@
 package xtypes
 
 import (
-	"encoding/json"
 	"reflect"
 
-	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xtypes/internal"
 )
 
@@ -75,13 +73,6 @@ func (m *XMaps) MapScan(obj interface{}) error {
 	if obj == nil {
 		return nil
 	}
-	switch v := obj.(type) {
-	case []byte:
-		*m = XMaps{}
-		return json.Unmarshal(v, m)
-	case string:
-		*m = XMaps{}
-		return json.Unmarshal(bytesconv.StringToBytes(v), m)
-	}
-	return nil
+	*m = XMaps{}
+	return mapscan(obj, m)
 }

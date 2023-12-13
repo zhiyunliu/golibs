@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xtransform"
 )
 
@@ -110,15 +109,5 @@ func (m XMap) GetFloat64(key string) (float64, error) {
 }
 
 func (m *XMap) MapScan(obj interface{}) error {
-	if obj == nil {
-		return nil
-	}
-
-	switch v := obj.(type) {
-	case []byte:
-		return json.Unmarshal(v, m)
-	case string:
-		return json.Unmarshal(bytesconv.StringToBytes(v), m)
-	}
-	return nil
+	return mapscan(obj, m)
 }
