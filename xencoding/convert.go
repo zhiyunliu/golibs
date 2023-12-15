@@ -4,31 +4,30 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 )
 
-//UTF8 utf-8
+// UTF8 utf-8
 const UTF8 = "utf-8"
 
-//GBK gbk
+// GBK gbk
 const GBK = "gbk"
 
-//GB2312  gb2312
+// GB2312  gb2312
 const GB2312 = "gb2312"
 
-//Encode 将UTF8字符串编码为gbk或gb2312格式
+// Encode 将UTF8字符串编码为gbk或gb2312格式
 func Encode(content string, e string) (result []byte, err error) {
 	return EncodeBytes([]byte(content), e)
 }
 
-//EncodeBytes 将UTF8字符串编码为gbk或gb2312格式
+// EncodeBytes 将UTF8字符串编码为gbk或gb2312格式
 func EncodeBytes(buff []byte, e string) (result []byte, err error) {
 	reader := GetEncodeReader(buff, e)
-	d, err := ioutil.ReadAll(reader)
+	d, err := io.ReadAll(reader)
 	if err != nil {
 		err = fmt.Errorf("编码转换失败:content:%s, err:%+v", string(buff), err)
 		return
@@ -36,15 +35,15 @@ func EncodeBytes(buff []byte, e string) (result []byte, err error) {
 	return d, nil
 }
 
-//Decode 根据编码进行解码操作
+// Decode 根据编码进行解码操作
 func Decode(content string, e string) (result []byte, err error) {
 	return DecodeBytes([]byte(content), e)
 }
 
-//DecodeBytes 根据编码进行解码操作
+// DecodeBytes 根据编码进行解码操作
 func DecodeBytes(buff []byte, e string) (result []byte, err error) {
 	reader := GetDecodeReader(buff, e)
-	d, err := ioutil.ReadAll(reader)
+	d, err := io.ReadAll(reader)
 	if err != nil {
 		err = fmt.Errorf("编码转换失败:content:%s, err:%+v", string(buff), err)
 		return
