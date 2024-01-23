@@ -25,7 +25,21 @@ func GetString(v interface{}) string {
 	if v == nil {
 		return ""
 	}
-	return fmt.Sprintf("%+v", v)
+
+	switch t := v.(type) {
+	case string:
+		return t
+	case *string:
+		return *t
+	case []byte:
+		return bytesconv.BytesToString(t)
+	case *[]byte:
+		return bytesconv.BytesToString(*t)
+	case fmt.Stringer:
+		return t.String()
+	default:
+		return fmt.Sprintf("%+v", v)
+	}
 }
 
 func GetInt(tmp interface{}) (int, error) {
@@ -57,10 +71,9 @@ func GetInt(tmp interface{}) (int, error) {
 		return 0, fmt.Errorf("数据越界:int64=>int,%d", val)
 	case string:
 		return strToint(val)
+	case fmt.Stringer:
+		return strToint(val.String())
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strToint(strer.String())
-		}
 	}
 
 	return 0, newNotSupportErr(tmp)
@@ -93,10 +106,10 @@ func GetInt64(tmp interface{}) (int64, error) {
 		return *val, nil
 	case string:
 		return strconv.ParseInt(val, 10, 64)
+	case fmt.Stringer:
+		return strconv.ParseInt(val.String(), 10, 64)
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strconv.ParseInt(strer.String(), 10, 64)
-		}
+
 	}
 
 	return 0, newNotSupportErr(tmp)
@@ -131,10 +144,11 @@ func GetUint64(tmp interface{}) (uint64, error) {
 
 	case string:
 		return strconv.ParseUint(val, 10, 64)
+
+	case fmt.Stringer:
+		return strconv.ParseUint(val.String(), 10, 64)
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strconv.ParseUint(strer.String(), 10, 64)
-		}
+
 	}
 
 	return 0, newNotSupportErr(tmp)
@@ -155,10 +169,10 @@ func GetFloat64(tmp interface{}) (float64, error) {
 		return float64(*val), nil
 	case string:
 		return strconv.ParseFloat(val, 64)
+	case fmt.Stringer:
+		return strconv.ParseFloat(val.String(), 64)
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strconv.ParseFloat(strer.String(), 64)
-		}
+
 	}
 
 	return 0, newNotSupportErr(tmp)
@@ -204,43 +218,4 @@ func mapscan(obj any, m any) error {
 		return json.Unmarshal(bytesconv.StringToBytes(*v), m)
 	}
 	return nil
-}
-
-// 将value 转换为map
-func AnyToMap(value any) (map[string]any, error) {
-	result := make(map[string]interface{})
-
-	// 使用反射获取值的类型信息
-	val := reflect.ValueOf(value)
-
-	// 如果是指针，检查是否为nil，并获取其指向的值
-	if val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return result, nil // 如果是nil指针，直接返回空的map
-		}
-		val = val.Elem()
-	}
-
-	// 检查值的类型
-	switch val.Kind() {
-	case reflect.Map:
-		// 如果是map类型，遍历键值对并转换为map[string]interface{}
-		keys := val.MapKeys()
-		for _, key := range keys {
-			result[key.String()] = val.MapIndex(key).Interface()
-		}
-	case reflect.Struct:
-		// 如果是struct类型，遍历字段并使用json标签作为键
-		for i := 0; i < val.NumField(); i++ {
-			field := val.Type().Field(i)
-			jsonTag := field.Tag.Get("json")
-			if jsonTag != "" && jsonTag != "-" {
-				result[jsonTag] = val.Field(i).Interface()
-			}
-		}
-	default:
-		return nil, fmt.Errorf("unsupported input type: %v", val.Kind())
-	}
-
-	return result, nil
 }
