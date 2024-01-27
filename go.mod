@@ -7,7 +7,13 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/json-iterator/go v1.1.12
 	github.com/shopspring/decimal v1.3.1
+	github.com/stretchr/testify v1.3.0
 	golang.org/x/text v0.3.7
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 )
 
 require (
