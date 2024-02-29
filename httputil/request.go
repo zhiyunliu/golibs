@@ -2,7 +2,7 @@ package httputil
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -52,7 +52,7 @@ func Request(method string, url string, data []byte, opts ...Option) (body Body,
 		return
 	}
 	defer resp.Body.Close()
-	respBytes, err := ioutil.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

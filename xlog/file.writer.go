@@ -37,6 +37,8 @@ func newFileWriter(path string, layout *Layout) (fa *fileWriter, err error) {
 	if err != nil {
 		return
 	}
+	fa.lock = sync.Mutex{}
+	fa.onceLock = sync.Once{}
 	fa.Level = layout.Level
 	fa.ticker = time.NewTicker(fa.interval)
 	fa.writer = bufio.NewWriterSize(fa.file, 4096)
@@ -49,6 +51,7 @@ func (f *fileWriter) Write(event *Event) {
 	if f.Level > event.Level {
 		return
 	}
+	event = event.Format(f.layout)
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	if f.writeCount > 10000 {
@@ -62,6 +65,9 @@ func (f *fileWriter) Write(event *Event) {
 
 //Close 关闭当前appender
 func (f *fileWriter) Close() {
+	if f == nil {
+		return
+	}
 	f.onceLock.Do(func() {
 		f.flush()
 		close(f.closeChan)

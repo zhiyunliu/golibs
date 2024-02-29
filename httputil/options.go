@@ -3,6 +3,7 @@ package httputil
 import (
 	"crypto/tls"
 	"net/http"
+	"strings"
 )
 
 type options struct {
@@ -26,29 +27,26 @@ func WithHeader(name string, val ...string) Option {
 }
 
 func WithContentTypeJson() Option {
-	return func(o *options) {
-		if o.header == nil {
-			o.header = make(http.Header)
-		}
-		o.header[_contentType] = []string{_contentTypeJson}
-	}
+	return WithContentType(_contentTypeJson)
 }
 
 func WithContentTypeUrlencoded() Option {
-	return func(o *options) {
-		if o.header == nil {
-			o.header = make(http.Header)
-		}
-		o.header[_contentType] = []string{_contentTypeUrlencoded}
-	}
+	return WithContentType(_contentTypeUrlencoded)
 }
 
-func WithContentTypeFormData() Option {
+func WithContentTypeFormData(boundary string) Option {
+	if strings.ContainsAny(boundary, `()<>@,;:\"/[]?= `) {
+		boundary = `"` + boundary + `"`
+	}
+	return WithContentType(_contentTypeFormdata + boundary)
+}
+
+func WithContentType(contentType string) Option {
 	return func(o *options) {
 		if o.header == nil {
 			o.header = make(http.Header)
 		}
-		o.header[_contentType] = []string{_contentTypeFormdata}
+		o.header[_contentType] = []string{contentType}
 	}
 }
 

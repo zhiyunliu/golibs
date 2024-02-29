@@ -5,24 +5,43 @@ import (
 	"sync"
 )
 
+var (
+	_appenderCache = sync.Map{}
+	_defaultLayout = "[%time][%l][%session][%idx] %content"
+)
+
+func Registry(builder AppenderBuilder) {
+	_appenderCache.Store(builder.Name(), builder)
+}
+
+type AppenderBuilder interface {
+	Name() string
+	DefaultLayout() *Layout
+	Build(layout *Layout) Appender
+}
+
 //Appender 定义appender接口
 type Appender interface {
 	Name() string
-	Write(*Layout, *Event) error
+	Layout() *Layout
+	Write(*Event) error
 	Close() error
 }
 
 type logWriter struct {
 	appenders map[string]Appender
-	layouts   []*Layout
 	lock      sync.RWMutex
 }
 
 func newlogWriter() *logWriter {
 	return &logWriter{
 		appenders: make(map[string]Appender),
-		layouts:   make([]*Layout, 0),
 	}
+}
+func (a *logWriter) RebuildAppender(newMap map[string]Appender) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	a.appenders = newMap
 }
 
 //Attach  添加appender
@@ -44,21 +63,6 @@ func (a *logWriter) Detach(name string) {
 	delete(a.appenders, name)
 }
 
-//Append 添加layout配置
-func (a *logWriter) Append(layouts ...*Layout) {
-	a.lock.Lock()
-	defer a.lock.Unlock()
-	for _, layout := range layouts {
-		if layout.Level == LevelOff {
-			continue
-		}
-		if _, ok := a.appenders[layout.Type]; ok {
-			layout.Init()
-			a.layouts = append(a.layouts, layout)
-		}
-	}
-}
-
 //Log 记录日志信息
 func (a *logWriter) Log(event *Event) {
 	defer func() {
@@ -68,13 +72,8 @@ func (a *logWriter) Log(event *Event) {
 	}()
 	a.lock.RLock()
 	defer a.lock.RUnlock()
-	for _, layout := range a.layouts {
-		if layout.Level > event.Level {
-			continue
-		}
-		if apppender, ok := a.appenders[layout.Type]; ok {
-			apppender.Write(layout, event.Format(layout))
-		}
+	for _, adr := range a.appenders {
+		adr.Write(event)
 	}
 }
 
@@ -86,5 +85,4 @@ func (a *logWriter) Close() error {
 		v.Close()
 	}
 	return nil
-
 }

@@ -10,23 +10,43 @@ import (
 
 const File string = "file"
 
+const (
+	_clearTimeRange = time.Minute * 1
+	_clearInterval  = time.Second * 30
+)
+
 //FileAppender 文件FileAppender
 type FileAppender struct {
 	writers       cmap.ConcurrentMap
 	cleanTicker   *time.Ticker
-	cleanInterval uint
+	cleanInterval time.Duration
 	closeChan     chan struct{}
 	onceLock      sync.Once
+	layout        *Layout
 }
 
-//NewFileAppender 构建file FileAppender
-func NewFileAppender() *FileAppender {
+func init() {
+	Registry(&fileApderBuilder{})
+}
+
+type fileApderBuilder struct {
+}
+
+func (b *fileApderBuilder) Name() string {
+	return File
+}
+func (b *fileApderBuilder) DefaultLayout() *Layout {
+	return &Layout{LevelName: LevelInfo.Name(), Path: _logfilePath, Content: _defaultLayout}
+}
+func (b *fileApderBuilder) Build(layout *Layout) Appender {
 	a := &FileAppender{
 		closeChan:     make(chan struct{}),
 		writers:       cmap.New(),
-		cleanInterval: 60 * 10,
+		cleanInterval: _clearInterval,
 	}
-	a.cleanTicker = time.NewTicker(time.Second * time.Duration(a.cleanInterval))
+	a.layout = layout
+	a.layout.Init()
+	a.cleanTicker = time.NewTicker(a.cleanInterval)
 	go a.clean()
 	return a
 }
@@ -35,13 +55,17 @@ func (a *FileAppender) Name() string {
 	return File
 }
 
-func (a *FileAppender) Write(layout *Layout, event *Event) error {
-	filePath := event.Transform(layout.Path, false)
+func (a *FileAppender) Layout() *Layout {
+	return a.layout
+}
+
+func (a *FileAppender) Write(event *Event) error {
+	filePath := event.Transform(a.layout.Path, false)
 	res := a.writers.Upsert(filePath, nil, func(exists bool, oldval, newval interface{}) interface{} {
 		if exists {
 			return oldval
 		}
-		writer, err := newFileWriter(filePath, layout)
+		writer, err := newFileWriter(filePath, a.layout)
 		if err != nil {
 			err = fmt.Errorf("创建FileWriter.Path=%s.Error:%+v", filePath, err)
 			panic(err)
@@ -49,7 +73,6 @@ func (a *FileAppender) Write(layout *Layout, event *Event) error {
 		return writer
 
 	})
-	event = event.Format(layout)
 	res.(*fileWriter).Write(event)
 	return nil
 }
@@ -77,17 +100,17 @@ func (a *FileAppender) clean() {
 }
 
 func (a *FileAppender) cleanWriters() {
-	for item := range a.writers.IterBuffered() {
-		a.writers.RemoveCb(item.Key, func(key string, value interface{}, exists bool) bool {
-			if !exists {
-				return exists
-			}
-			w := value.(*fileWriter)
-			if time.Since(w.lastWrite) < 5*time.Minute {
-				w.Close()
-				return true
-			}
-			return false
-		})
+	remvesList := []string{}
+	a.writers.IterCb(func(key string, value interface{}) {
+		lastwrite := value.(*fileWriter).lastWrite
+		if time.Since(lastwrite) >= _clearTimeRange {
+			value.(*fileWriter).Close()
+			remvesList = append(remvesList, key)
+			return
+		}
+	})
+
+	for i := range remvesList {
+		a.writers.Remove(remvesList[i])
 	}
 }

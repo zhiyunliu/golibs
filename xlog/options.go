@@ -1,17 +1,19 @@
 package xlog
 
 //pipe buffer size
-var BufferSize = 200000
+var BufferSize = 20000
 
 type options struct {
-	sid  string
-	name string
-	data map[string]string
+	sid     string
+	name    string
+	srvType string
+	data    map[string]string
 }
 
 func (o *options) reset() {
 	o.sid = ""
 	o.name = ""
+	o.srvType = ""
 	o.data = nil
 }
 
@@ -26,6 +28,11 @@ func WithName(name string) Option {
 func WithSid(sid string) Option {
 	return func(o *options) {
 		o.sid = sid
+	}
+}
+func WithSrvType(srvType string) Option {
+	return func(o *options) {
+		o.srvType = srvType
 	}
 }
 

@@ -11,36 +11,38 @@ import (
 
 //stdWriter 控制台输出器
 type stdWriter struct {
-	writer     *bytes.Buffer
-	output     *log.Logger
-	lastWrite  time.Time
-	layout     *Layout
-	interval   time.Duration
-	ticker     *time.Ticker
-	lock       sync.Mutex
-	onceLock   sync.Once
-	countChan  chan struct{}
-	closeChan  chan struct{}
-	Level      Level
-	writeCount uint
+	writer    *bytes.Buffer
+	output    *log.Logger
+	lastWrite time.Time
+	layout    *Layout
+	//interval  time.Duration
+	//ticker    *time.Ticker
+	//lock     sync.Mutex
+	onceLock sync.Once
+	//countChan chan struct{}
+	closeChan chan struct{}
+	Level     Level
+	//writeCount uint
 }
 
 //newwriter 构建基于文件流的日志输出对象,使用带缓冲区的文件写入，缓存区达到4K或每隔3秒写入一次文件。
-func newStdWriter(layout *Layout) (fa *stdWriter, err error) {
+func newStdWriter(layout *Layout) (fa *stdWriter) {
 	fa = &stdWriter{
-		layout:    layout,
-		interval:  time.Microsecond * 100,
-		countChan: make(chan struct{}, 100),
+		layout: layout,
+		//interval:  time.Microsecond * 50,
+		//countChan: make(chan struct{}, 100),
 		closeChan: make(chan struct{}),
 	}
+	fa.onceLock = sync.Once{}
+	//fa.lock = sync.Mutex{}
 	fa.writer = bytes.NewBufferString("")
 	fa.Level = layout.Level
-	fa.ticker = time.NewTicker(fa.interval)
+	//fa.ticker = time.NewTicker(fa.interval)
 
 	fa.output = log.New(fa.writer, "", log.Llongcolor)
 	fa.output.SetOutputLevel(log.Ldebug)
 
-	go fa.timeFlush()
+	//go fa.timeFlush()
 	return
 }
 
@@ -49,12 +51,13 @@ func (f *stdWriter) Write(event *Event) {
 	if f.Level > event.Level {
 		return
 	}
-	f.lock.Lock()
-	defer f.lock.Unlock()
-	if f.writeCount > 10000 {
-		f.countChan <- struct{}{}
-		f.writeCount = 0
-	}
+	event = event.Format(f.layout)
+	//f.lock.Lock()
+	//defer f.lock.Unlock()
+	// if f.writeCount > 10000 {
+	// 	f.countChan <- struct{}{}
+	// 	f.writeCount = 0
+	// }
 
 	switch event.Level {
 	case LevelDebug:
@@ -65,37 +68,46 @@ func (f *stdWriter) Write(event *Event) {
 		f.output.Warn(event.Output)
 	case LevelError:
 		f.output.Error(event.Output)
+	case LevelPanic:
+		f.output.Panic(event.Output)
 	case LevelFatal:
 		f.output.Output("", log.Lfatal, 1, event.Output)
 	}
+	f.writer.WriteTo(os.Stdout)
+	f.writer.Reset()
 	f.lastWrite = time.Now()
 }
 
 //Close 关闭当前appender
 func (f *stdWriter) Close() {
+	if f == nil {
+		return
+	}
 	f.onceLock.Do(func() {
-		f.flush()
+		//f.flush()
 		close(f.closeChan)
-		f.ticker.Stop()
+		//f.ticker.Stop()
 	})
 }
 
-//writeTo 定时写入文件
-func (f *stdWriter) timeFlush() {
-	for {
-		select {
-		case <-f.closeChan:
-			return
-		case <-f.ticker.C:
-			f.flush()
-		case <-f.countChan:
-			f.flush()
-		}
-	}
-}
-func (f *stdWriter) flush() {
-	f.lock.Lock()
-	f.writer.WriteTo(os.Stdout)
-	f.writer.Reset()
-	f.lock.Unlock()
-}
+// //writeTo 定时写入文件
+// func (f *stdWriter) timeFlush() {
+// 	for {
+// 		select {
+// 		case <-f.closeChan:
+// 			return
+// 		case <-f.ticker.C:
+// 			fmt.Println("stdWriter.timeFlush.ticker.C")
+// 			f.flush()
+// 		case <-f.countChan:
+// 			fmt.Println("stdWriter.timeFlush.countChan")
+// 			f.flush()
+// 		}
+// 	}
+// }
+// func (f *stdWriter) flush() {
+// 	f.lock.Lock()
+// 	f.writer.WriteTo(os.Stdout)
+// 	f.writer.Reset()
+// 	f.lock.Unlock()
+// }

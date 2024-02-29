@@ -48,7 +48,12 @@ func (ps WriterPipes) Write(evt *Event) error {
 	if p.closed {
 		return fmt.Errorf("log writer pipe closed")
 	}
-	p.eventsChan <- evt
+	select {
+	case p.eventsChan <- evt:
+	default:
+		//丢弃多余的日志
+	}
+
 	return nil
 }
 

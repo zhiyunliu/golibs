@@ -12,6 +12,7 @@ import (
 	"hash"
 	"io"
 	"strings"
+	"sync"
 
 	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xencoding/base64"
@@ -19,19 +20,24 @@ import (
 
 type mapItem func() (crypto.Hash, hash.Hash)
 
-var hashFunc map[string]mapItem
+var hashFunc sync.Map
 
 func init() {
-	hashFunc = map[string]mapItem{}
-	hashFunc["sha1"] = func() (crypto.Hash, hash.Hash) {
+	hashFunc = sync.Map{}
+	hashFunc.Store("sha1", mapItem(func() (crypto.Hash, hash.Hash) {
 		return crypto.SHA1, sha1.New()
-	}
-	hashFunc["sha256"] = func() (crypto.Hash, hash.Hash) {
+	}))
+	hashFunc.Store("sha256", mapItem(func() (crypto.Hash, hash.Hash) {
 		return crypto.SHA256, sha256.New()
-	}
-	hashFunc["md5"] = func() (crypto.Hash, hash.Hash) {
+	}))
+	hashFunc.Store("md5", mapItem(func() (crypto.Hash, hash.Hash) {
 		return crypto.MD5, md5.New()
-	}
+	}))
+}
+
+func RegHashMode(mode string, creator func() (crypto.Hash, hash.Hash)) {
+	mode = strings.ToLower(mode)
+	hashFunc.Store(mode, mapItem(creator))
 }
 
 //GenerateKey 生成基于pkcs1的rsa私、公钥对
@@ -102,11 +108,11 @@ func Sign(data, privateKey, mode string) (string, error) {
 	}
 
 	mode = strings.ToLower(mode)
-	callback, ok := hashFunc[mode]
+	callback, ok := hashFunc.Load(mode)
 	if !ok {
 		return "", fmt.Errorf("rsa Sign 无效的Mode:%s,sha1,sha256,md5", mode)
 	}
-	cryptohash, t := callback()
+	cryptohash, t := callback.(mapItem)()
 	io.WriteString(t, data)
 	digest := t.Sum(nil)
 
@@ -132,7 +138,7 @@ func Verify(data, sign, publicKey, mode string) (pass bool, err error) {
 	}
 
 	mode = strings.ToLower(mode)
-	callback, ok := hashFunc[mode]
+	callback, ok := hashFunc.Load(mode)
 
 	if !ok {
 		return false, fmt.Errorf("rsa Verify 无效的Mode:%s,sha1,sha256,md5", mode)
@@ -140,7 +146,7 @@ func Verify(data, sign, publicKey, mode string) (pass bool, err error) {
 
 	signBtytes, err := base64.Decode(sign)
 
-	cryptohash, t := callback()
+	cryptohash, t := callback.(mapItem)()
 	io.WriteString(t, data)
 	digest := t.Sum(nil)
 

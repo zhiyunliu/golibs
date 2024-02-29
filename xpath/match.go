@@ -1,12 +1,13 @@
 package xpath
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	cmap "github.com/orcaman/concurrent-map"
+	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
 var specials = `~!@#$%^&*()_+-=<>?:"{}|,./;'[]\`
@@ -47,49 +48,80 @@ func (s sortString) Less(i, j int) bool {
 
 //Match 构建模糊匹配缓存查找管理器
 type Match struct {
-	cache     cmap.ConcurrentMap
+	mutex     sync.Mutex
+	cache     *matchCacheWrap
 	all       []string
-	regexpAll []string
+	regexpAll []*regexp.Regexp
+}
+type matchCacheWrap struct {
+	enbale   bool
+	cacheMap cmap.ConcurrentMap
+}
+
+func (w *matchCacheWrap) Get(key string) (val interface{}, ok bool) {
+	if !w.enbale {
+		return
+	}
+	val, ok = w.cacheMap.Get(key)
+	return
+}
+func (w *matchCacheWrap) SetIfAbsent(key string, val interface{}) {
+	if !w.enbale {
+		return
+	}
+	w.cacheMap.SetIfAbsent(key, val)
 }
 
 //NewMatch 构建模糊匹配缓存查找管理器
-func NewMatch(all ...string) *Match {
+func NewMatch(pathList []string, opts ...Option) *Match {
 	m := &Match{
-		cache: cmap.New(),
-		all:   all,
+		cache: &matchCacheWrap{
+			cacheMap: cmap.New(),
+		},
+		all: pathList,
+	}
+	for i := range opts {
+		opts[i](m)
 	}
 	sort.Sort(sortString(m.all))
 
-	m.regexpAll = make([]string, len(m.all))
+	m.regexpAll = make([]*regexp.Regexp, len(m.all))
 
 	return m
 }
 
+func (m *Match) CanUseCache() bool {
+	return m.cache.enbale
+}
+
 //Match Match
 func (m *Match) Match(path string, spls ...string) (match bool, pattern string) {
-	var err error
 	sep := "/"
 	if len(spls) > 0 {
 		sep = spls[0]
 	}
-	key := m.buildCacheKey(path, sep)
-	if val, ok := m.cache.Get(key); ok {
-		return true, val.(string)
+
+	cacheKey := ""
+	if m.CanUseCache() {
+		cacheKey = m.buildCacheKey(path, sep)
+		if val, ok := m.cache.Get(cacheKey); ok {
+			return true, val.(string)
+		}
 	}
 
 	for i, u := range m.all {
 		if strings.EqualFold(u, path) {
-			m.cache.SetIfAbsent(key, u)
+			if m.CanUseCache() {
+				m.cache.SetIfAbsent(cacheKey, u)
+			}
 			return true, u
 		}
 		regp := m.getRegexp(u, i, sep)
-		//fmt.Println("regp:", regp)
-		match, err = regexp.Match(regp, []byte(path))
-		if err != nil {
-			match = false
-		}
+		match = regp.Match(bytesconv.StringToBytes(path))
 		if match {
-			m.cache.SetIfAbsent(key, u)
+			if m.CanUseCache() {
+				m.cache.SetIfAbsent(cacheKey, u)
+			}
 			return match, u
 		}
 	}
@@ -97,11 +129,16 @@ func (m *Match) Match(path string, spls ...string) (match bool, pattern string) 
 }
 
 func (m *Match) buildCacheKey(path, sep string) string {
-	return fmt.Sprintf("%s:%s", sep, path)
+	return sep + ":" + path
 }
 
-func (m *Match) getRegexp(u string, idx int, sep string) string {
-	if m.regexpAll[idx] == "" {
+func (m *Match) getRegexp(u string, idx int, sep string) *regexp.Regexp {
+	if m.regexpAll[idx] == nil {
+		m.mutex.Lock()
+		defer m.mutex.Unlock()
+		if m.regexpAll[idx] != nil {
+			return m.regexpAll[idx]
+		}
 		parties := strings.Split(u, sep)
 		npts := make([]string, len(parties))
 		curSpecials := m.processSpecial(strings.ReplaceAll(specials, sep, ""))
@@ -131,7 +168,7 @@ func (m *Match) getRegexp(u string, idx int, sep string) string {
 			pv = strings.Replace(pv, "{0}", sl, -1)
 			npts[i] = strings.ReplaceAll(pv, "{1}", curSpecials)
 		}
-		m.regexpAll[idx] = "^(" + strings.Join(npts, "") + ")$"
+		m.regexpAll[idx] = regexp.MustCompile("^(" + strings.Join(npts, "") + ")$")
 	}
 	return m.regexpAll[idx]
 }

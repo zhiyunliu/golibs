@@ -10,48 +10,48 @@ import (
 )
 
 type Xerror interface {
-	error
 	GetCode() int
 	GetData() xtypes.XMap
+	Error() string
 }
 
-type XErr struct {
-	Code int
-	Data xtypes.XMap
-	error
+type xErr struct {
+	Code   int
+	Data   xtypes.XMap
+	Ignore bool
+	error  error
 }
 
-//GetCode 获取错误码
-func (a *XErr) GetCode() int {
+// GetCode 获取错误码
+func (a xErr) GetCode() int {
 	return a.Code
 }
 
-//GetCode 获取错误码
-func (a *XErr) GetData() xtypes.XMap {
+// GetCode 获取错误码
+func (a xErr) GetData() xtypes.XMap {
 	return a.Data
 }
 
-//GetError 获取错误信息
-func (a *XErr) GetError() error {
+// GetError 获取错误信息
+func (a xErr) GetError() error {
 	return a
 }
 
-//GetError 获取错误信息
-func (a *XErr) String() string {
+// GetError 获取错误信息
+func (a xErr) String() string {
 	bytes, _ := json.Marshal(a)
 	return bytesconv.BytesToString(bytes)
 }
 
-//GetCode 获取错误码
-func (a *XErr) Error() string {
-	bytes, _ := json.Marshal(a)
-	return bytesconv.BytesToString(bytes)
+// GetCode 获取错误码
+func (a xErr) Error() string {
+	return a.error.Error()
 }
 
-func (a *XErr) Is(e error) bool {
+func (a xErr) Is(e error) bool {
 	return errors.Is(a.error, e)
 }
-func (a *XErr) As(target interface{}) bool {
+func (a xErr) As(target interface{}) bool {
 	return errors.As(a.error, target)
 }
 
@@ -59,13 +59,13 @@ func New(err error, opts ...Option) Xerror {
 	return NewCode(GetCode(err, 901), err, opts...)
 }
 
-//Newf 创建错误对象
+// Newf 创建错误对象
 func Newf(f string, args ...interface{}) Xerror {
 	return New(fmt.Errorf(f, args...))
 }
 
 func NewCode(code int, err error, opts ...Option) Xerror {
-	xe := &XErr{
+	xe := &xErr{
 		Code:  code,
 		error: err,
 	}

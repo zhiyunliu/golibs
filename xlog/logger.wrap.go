@@ -8,7 +8,7 @@ import (
 	"bytes"
 )
 
-//Logger 日志对象
+// Logger 日志对象
 type LoggerWrap struct {
 	opts    *options
 	isPause bool
@@ -39,7 +39,7 @@ func init() {
 	adjustmentWriteRoutine(1)
 }
 
-//New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
+// New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
 func New(opt ...Option) (logger Logger) {
 	wrapper := &LoggerWrap{}
 	opts := &options{
@@ -67,34 +67,34 @@ func Stats() StatsInfo {
 	return info
 }
 
-//Name 名字
+// Name 名字
 func (logger *LoggerWrap) Name() string {
 	return logger.opts.name
 }
 
-//Close 关闭当前日志组件
+// Close 关闭当前日志组件
 func (logger *LoggerWrap) Close() {
 	logger.opts.reset()
 	logger.idx = 0
 	_loggerPool.Put(logger)
 }
 
-//Pause 暂停记录
+// Pause 暂停记录
 func (logger *LoggerWrap) Pause() {
 	logger.isPause = true
 }
 
-//Resume 恢复记录
+// Resume 恢复记录
 func (logger *LoggerWrap) Resume() {
 	logger.isPause = false
 }
 
-//GetSessionID 获取当前日志的session id
-func (logger *LoggerWrap) GetSessionID() string {
+// GetSessionID 获取当前日志的session id
+func (logger *LoggerWrap) SessionID() string {
 	return logger.opts.sid
 }
 
-//Debug 输出debug日志
+// Debug 输出debug日志
 func (logger *LoggerWrap) Debug(args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -102,7 +102,7 @@ func (logger *LoggerWrap) Debug(args ...interface{}) {
 	logger.Log(LevelDebug, args...)
 }
 
-//Debugf 输出debug日志
+// Debugf 输出debug日志
 func (logger *LoggerWrap) Debugf(format string, args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -110,7 +110,7 @@ func (logger *LoggerWrap) Debugf(format string, args ...interface{}) {
 	logger.Logf(LevelDebug, format, args...)
 }
 
-//Info 输出info日志
+// Info 输出info日志
 func (logger *LoggerWrap) Info(args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -118,7 +118,7 @@ func (logger *LoggerWrap) Info(args ...interface{}) {
 	logger.Log(LevelInfo, args...)
 }
 
-//Infof 输出info日志
+// Infof 输出info日志
 func (logger *LoggerWrap) Infof(format string, args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -126,7 +126,7 @@ func (logger *LoggerWrap) Infof(format string, args ...interface{}) {
 	logger.Logf(LevelInfo, format, args...)
 }
 
-//Warn 输出info日志
+// Warn 输出info日志
 func (logger *LoggerWrap) Warn(args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -134,7 +134,7 @@ func (logger *LoggerWrap) Warn(args ...interface{}) {
 	logger.Log(LevelWarn, args...)
 }
 
-//Warnf 输出info日志
+// Warnf 输出info日志
 func (logger *LoggerWrap) Warnf(format string, args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -142,7 +142,7 @@ func (logger *LoggerWrap) Warnf(format string, args ...interface{}) {
 	logger.Logf(LevelWarn, format, args...)
 }
 
-//Error 输出Error日志
+// Error 输出Error日志
 func (logger *LoggerWrap) Error(args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -150,7 +150,7 @@ func (logger *LoggerWrap) Error(args ...interface{}) {
 	logger.Log(LevelError, args...)
 }
 
-//Errorf 输出Errorf日志
+// Errorf 输出Errorf日志
 func (logger *LoggerWrap) Errorf(format string, args ...interface{}) {
 	if logger.isPause || _globalPause {
 		return
@@ -167,7 +167,7 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 	if _hasClosed {
 		return
 	}
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, fmt.Sprintf(format, args...), logger.opts.data)
+	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprintf(format, args...), logger.opts.data)
 	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
 	_writerPipes.Write(event)
@@ -182,7 +182,7 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 		return
 	}
 
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, getString(args...), logger.opts.data)
+	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, getString(args...), logger.opts.data)
 	atomic.AddInt32(&logger.idx, 1)
 	event.Idx = logger.idx
 	_writerPipes.Write(event)
@@ -257,7 +257,7 @@ func GetLogger(opts ...Option) Logger {
 	return log
 }
 
-//Close 关闭所有日志组件
+// Close 关闭所有日志组件
 func Close() {
 	_closeLock.Do(func() {
 		_hasClosed = true

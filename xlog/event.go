@@ -11,30 +11,32 @@ import (
 	"time"
 
 	"github.com/zhiyunliu/golibs/bytesconv"
-	"github.com/zhiyunliu/golibs/xnet"
 )
 
-var eventPool *sync.Pool
-var appName string = filepath.Base(os.Args[0])
-var localip string
-var curPid int
-var word, _ = regexp.Compile(`%\w+`)
+var (
+	curPid string
+
+	eventPool *sync.Pool
+	appName   string = filepath.Base(os.Args[0])
+	word, _          = regexp.Compile(`%\w+`)
+)
 
 func init() {
+	curPid = strconv.FormatInt(int64(os.Getpid()), 10)
+
 	eventPool = &sync.Pool{
 		New: func() interface{} {
 			return &Event{}
 		},
 	}
-	localip = xnet.GetLocalIP()
-	curPid = os.Getpid()
 }
 
-//Event 日志信息
+// Event 日志信息
 type Event struct {
 	Name    string
 	Level   Level
 	Idx     int32
+	SrvType string
 	LogTime time.Time
 	Session string
 	Content string
@@ -42,21 +44,22 @@ type Event struct {
 	Tags    map[string]string
 }
 
-//NewEvent 构建日志事件
-func NewEvent(name string, level Level, session string, content string, tags map[string]string) *Event {
+// NewEvent 构建日志事件
+func NewEvent(name string, level Level, session string, srvType string, content string, tags map[string]string) *Event {
 	e := eventPool.Get().(*Event)
 	e.LogTime = time.Now()
 	e.Level = level
 	e.Name = name
 	e.Session = session
 	e.Content = content
+	e.SrvType = srvType
 	e.Tags = tags
 	return e
 }
 
-//Format 获取转换后的日志事件
+// Format 获取转换后的日志事件
 func (e *Event) Format(layout *Layout) *Event {
-	e.Output = e.Transform(layout.Layout, layout.IsJsonLayout)
+	e.Output = e.Transform(layout.Content, layout.isJson)
 	return e
 }
 
@@ -67,12 +70,18 @@ func (e *Event) Transform(template string, isJson bool) string {
 		switch key {
 		case "app":
 			return appName
+		case "pid":
+			return curPid
 		case "nm":
 			return e.Name
+		case "srvtype":
+			return e.SrvType
 		case "session":
 			return e.Session
 		case "date":
 			return e.LogTime.Format("20060102")
+		case "ndate":
+			return e.LogTime.Format("2006-01-02")
 		case "time":
 			return e.LogTime.Format("15:04:05.000000")
 		case "datetime":
@@ -97,8 +106,6 @@ func (e *Event) Transform(template string, isJson bool) string {
 			return e.Level.Name()
 		case "idx":
 			return strconv.FormatInt(int64(e.Idx), 10)
-		case "pid":
-			return strconv.FormatInt(int64(curPid), 10)
 		case "n":
 			return "\n"
 		case "content":
@@ -113,18 +120,13 @@ func (e *Event) Transform(template string, isJson bool) string {
 				return bytesconv.BytesToString(buff)
 			}
 			return e.Content
-		case "ip":
-			return localip
-		case "tags":
-			bytes, _ := json.Marshal(e.Tags)
-			return bytesconv.BytesToString(bytes)
 		default:
-			return ""
+			return Transform(key, e, isJson)
 		}
 	})
 }
 
-//Close 关闭回收日志
+// Close 关闭回收日志
 func (e *Event) Close() {
 	eventPool.Put(e)
 }

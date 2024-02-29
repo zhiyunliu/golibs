@@ -1,11 +1,17 @@
 package xlog
 
 import (
-	"github.com/zhiyunliu/golibs/xfile"
+	"log"
+	"sync"
+
 	"github.com/zhiyunliu/golibs/xstack"
 )
 
 const StackSkip = 5
+
+var (
+	_cfglocker = sync.Mutex{}
+)
 
 type Writer func(content ...interface{})
 
@@ -21,18 +27,8 @@ func getStack() string {
 //默认appender写入器
 var _mainWriter = newlogWriter()
 
-//AddAppender 添加appender
-func AddAppender(appender Appender) {
-	_mainWriter.Attach(appender)
-}
-
-//RemoveAppender 移除Appender
-func RemoveAppender(name string) {
-	_mainWriter.Detach(name)
-}
-
-//RemoveAppender 移除Appender
-func Appenders() []string {
+//AppenderList 获取列表
+func AppenderList() []string {
 	result := make([]string, len(_mainWriter.appenders))
 	idx := 0
 	for key := range _mainWriter.appenders {
@@ -41,41 +37,35 @@ func Appenders() []string {
 	return result
 }
 
-//AddLayout 添加日志输出配置
-func AddLayout(l ...*Layout) {
-	_mainWriter.Append(l...)
-}
-
 func asyncWrite(event *Event) {
+	if !_defaultParam.inited {
+		err := reconfigLogWriter(_defaultParam)
+		if err != nil {
+			log.Println("reconfigLogWriter.asyncWrite:", err)
+		}
+	}
 	_mainWriter.Log(event)
 }
 
-func loadLayout(path string) {
-	if !xfile.Exists(path) {
-		err := Encode(path)
-		if err != nil {
-			sysLogger.Errorf("创建日志配置文件失败 %v", err)
-			return
+func reconfigLogWriter(param *Param) error {
+	_cfglocker.Lock()
+	defer _cfglocker.Unlock()
+	if param.inited {
+		return nil
+	}
+	param.inited = true
+
+	layoutSetting, err := loadLayout(param.ConfigPath, _etcPath)
+	if err != nil {
+		return err
+	}
+	newAppenderMap := make(map[string]Appender)
+	for apn, layout := range layoutSetting.Layout {
+		if tmp, ok := _appenderCache.Load(apn); ok {
+			newAppenderMap[apn] = tmp.(AppenderBuilder).Build(layout)
 		}
 	}
 
-	layouts, err := Decode(path)
-	if err != nil {
-		sysLogger.Errorf("读取配置文件失败 %v", err)
-		return
-	}
-	_globalPause = !layouts.Status
-	AddLayout(layouts.Layouts...)
-}
-
-var LogPath = "../conf/logger.json"
-
-//进行日志配置文件初始化
-func defaultAppender() error {
-	AddAppender(NewFileAppender())
-	AddAppender(NewStudoutAppender())
-	loadLayout(LogPath)
+	_mainWriter.RebuildAppender(newAppenderMap)
 	return nil
 }
-
-var _ = defaultAppender()
