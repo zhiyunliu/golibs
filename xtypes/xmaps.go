@@ -1,8 +1,11 @@
 package xtypes
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"reflect"
 
+	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xtypes/internal"
 )
 
@@ -75,4 +78,14 @@ func (m *XMaps) MapScan(obj interface{}) error {
 	}
 	*m = XMaps{}
 	return mapscan(obj, m)
+}
+
+func (m XMaps) MarshalBinary() (data []byte, err error) {
+	return json.Marshal(m)
+}
+
+// Value String
+func (m XMaps) Value() (driver.Value, error) {
+	bytes, err := m.MarshalBinary()
+	return bytesconv.BytesToString(bytes), err
 }

@@ -1,24 +1,26 @@
 package datetime
 
 import (
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
-//DateTime DateTime
+// DateTime DateTime
 type DateTime struct {
 	opts *options
-	sys  *time.Time
+	time.Time
 }
 
-//NewDateTime 构建新的DateTime
+// NewDateTime 构建新的DateTime
 func New(time time.Time, opts ...Option) *DateTime {
 	opt := &options{
 		Format: DefaultTimeformat,
 	}
-	val := &DateTime{opts: opt, sys: &time}
+	val := &DateTime{opts: opt, Time: time}
 
 	for i := range opts {
 		opts[i](opt)
@@ -27,14 +29,13 @@ func New(time time.Time, opts ...Option) *DateTime {
 	return val
 }
 
-//MarshalJSON MarshalJSON
+// MarshalJSON MarshalJSON
 func (d *DateTime) MarshalJSON() (bytes []byte, err error) {
-	val := d.sys
-	tmpV := fmt.Sprintf(`"%s"`, val.Format(d.Format()))
+	tmpV := fmt.Sprintf(`"%s"`, d.Time.Format(d.Format()))
 	return bytesconv.StringToBytes(tmpV), nil
 }
 
-//UnmarshalJSON UnmarshalJSON
+// UnmarshalJSON UnmarshalJSON
 func (d *DateTime) UnmarshalJSON(bytes []byte) error {
 	if d.opts == nil {
 		d.opts = &options{
@@ -43,16 +44,34 @@ func (d *DateTime) UnmarshalJSON(bytes []byte) error {
 	}
 
 	val, err := time.Parse(fmt.Sprintf(`"%s"`, d.opts.Format), bytesconv.BytesToString(bytes))
-	*d = DateTime{sys: &val, opts: d.opts}
+	*d = DateTime{Time: val, opts: d.opts}
 	return err
 }
 
-//Format 默认2006-01-02 15:04:05
+// Format 默认2006-01-02 15:04:05
 func (d *DateTime) Format() string {
 	return d.opts.Format
 }
 
-//String String
+// String String
 func (d *DateTime) String() string {
-	return d.sys.Format(d.opts.Format)
+	return d.Time.Format(d.opts.Format)
+}
+
+// Value String
+func (d DateTime) Value() (driver.Value, error) {
+	return d.String(), nil
+}
+
+func (t *DateTime) Scan(v interface{}) error {
+	switch vt := v.(type) {
+	case time.Time:
+		// 字符串转成 time.Time 类型
+		// 切换时区
+		tmp := New(vt.Local())
+		*t = *tmp
+	default:
+		return errors.New("类型处理错误")
+	}
+	return nil
 }

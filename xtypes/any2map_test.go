@@ -21,70 +21,70 @@ type TestStruct3 struct {
 	Name string
 }
 
-func TestStructToMap(t *testing.T) {
+func TestAnyToMap(t *testing.T) {
 	obj := TestStruct{
 		ID:   1,
 		Name: "John",
 	}
 
-	expected := map[string]any{
+	expected := map[string]interface{}{
 		"id":   1,
 		"name": "John",
 	}
 
-	result := AnyToMap(obj)
-
-	assert.Equal(t, expected, result, "TestStructToMap should convert struct to map correctly")
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
+	assert.Equal(t, expected, result, "TestAnyToMap should convert struct to map correctly")
 }
 
-func TestStructToMapWithPointer(t *testing.T) {
+func TestAnyToMapWithPointer(t *testing.T) {
 	obj := &TestStruct{
 		ID:   1,
 		Name: "John",
 	}
 
-	expected := map[string]any{
+	expected := map[string]interface{}{
 		"id":   1,
 		"name": "John",
 	}
 
-	result := AnyToMap(obj)
-
-	assert.Equal(t, expected, result, "TestStructToMap should convert struct pointer to map correctly")
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
+	assert.Equal(t, expected, result, "TestAnyToMap should convert struct pointer to map correctly")
 }
 
-func TestStructToMapWithIgnoredField(t *testing.T) {
+func TestAnyToMapWithIgnoredField(t *testing.T) {
 	obj := TestStruct2{
 		ID:   1,
 		Name: "John",
 	}
 
-	expected := map[string]any{
+	expected := map[string]interface{}{
 		"id": 1,
 	}
 
-	result := AnyToMap(obj)
-
-	assert.Equal(t, expected, result, "TestStructToMap should ignore fields with '-' tag")
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
+	assert.Equal(t, expected, result, "TestAnyToMap should ignore fields with '-' tag")
 }
 
-func TestStructToMapWithEmptyTag(t *testing.T) {
+func TestAnyToMapWithEmptyTag(t *testing.T) {
 	obj := TestStruct3{
 		ID:   1,
 		Name: "John",
 	}
 
-	expected := map[string]any{
+	expected := map[string]interface{}{
 		"ID":   1,
 		"Name": "John",
 	}
 
-	result := AnyToMap(obj)
-
-	assert.Equal(t, expected, result, "TestStructToMap should use field name when json tag is empty")
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
+	assert.Equal(t, expected, result, "TestAnyToMap should use field name when json tag is empty")
 }
 
-func TestStructToMapWithNestedAnonymousStruct(t *testing.T) {
+func TestAnyToMapWithNestedAnonymousStruct(t *testing.T) {
 	type Nested struct {
 		Field1 string `json:"field1"`
 		Field2 int    `json:"field2"`
@@ -102,19 +102,19 @@ func TestStructToMapWithNestedAnonymousStruct(t *testing.T) {
 		},
 	}
 
-	expected := map[string]any{
+	expected := map[string]interface{}{
 		"id":     1,
 		"name":   "John",
 		"field1": "NestedField",
 		"field2": 2,
 	}
 
-	result := AnyToMap(obj)
-
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
 	assert.Equal(t, expected, result, "Test failed, expected: '%v', got:  '%v'", expected, result)
 }
 
-func TestStructToMapWithNestedAnonymousStruct2(t *testing.T) {
+func TestAnyToMapWithNestedAnonymousStruct2(t *testing.T) {
 	obj := struct {
 		ID     int    `json:"id"`
 		Name   string `json:"name"`
@@ -134,17 +134,17 @@ func TestStructToMapWithNestedAnonymousStruct2(t *testing.T) {
 		},
 	}
 
-	expected := map[string]any{
+	expected := map[string]interface{}{
 		"id":   1,
 		"name": "John",
-		"nested": map[string]any{
+		"nested": map[string]interface{}{
 			"field1": "NestedField",
 			"field2": 2,
 		},
 	}
 
-	result := AnyToMap(obj)
-
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
 	assert.Equal(t, expected, result, "Test failed, expected: '%v', got:  '%v'", expected, result)
 }
 
@@ -173,7 +173,7 @@ type UserItem struct {
 	PubgUserId string `json:"pubg_id"`
 }
 
-func TestStructToMapWithNestedAndAnonymousStruct(t *testing.T) {
+func TestAnyToMapWithNestedAndAnonymousStruct(t *testing.T) {
 	obj := UserItem{
 		Match: Match{
 			MatchId:   "1",
@@ -203,7 +203,7 @@ func TestStructToMapWithNestedAndAnonymousStruct(t *testing.T) {
 		PubgUserId: "PubgUser1",
 	}
 
-	expected := map[string]any{
+	expected := map[string]interface{}{
 		"match_id":   "1",
 		"map_name":   "Map1",
 		"begin_time": "10:00",
@@ -212,13 +212,13 @@ func TestStructToMapWithNestedAndAnonymousStruct(t *testing.T) {
 		"team_count": 2,
 		"game_type":  "Type1",
 		"team_size":  5,
-		"winners": []any{
-			map[string]any{
+		"winners": []interface{}{
+			map[string]interface{}{
 				"playerId": "Player1",
 				"name":     "John",
 				"kills":    10,
 			},
-			map[string]any{
+			map[string]interface{}{
 				"playerId": "Player2",
 				"name":     "Doe",
 				"kills":    15,
@@ -230,7 +230,7 @@ func TestStructToMapWithNestedAndAnonymousStruct(t *testing.T) {
 		"pubg_id":       "PubgUser1",
 	}
 
-	result := AnyToMap(obj)
-
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
 	assert.Equal(t, expected, result, "Test failed, expected: '%v', got:  '%v'", expected, result)
 }

@@ -1,9 +1,11 @@
 package xtypes
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 
+	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xtransform"
 )
 
@@ -110,4 +112,10 @@ func (m XMap) GetFloat64(key string) (float64, error) {
 
 func (m *XMap) MapScan(obj interface{}) error {
 	return mapscan(obj, m)
+}
+
+// Value String
+func (m XMap) Value() (driver.Value, error) {
+	bytes, err := m.MarshalBinary()
+	return bytesconv.BytesToString(bytes), err
 }

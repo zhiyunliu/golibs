@@ -25,7 +25,21 @@ func GetString(v interface{}) string {
 	if v == nil {
 		return ""
 	}
-	return fmt.Sprintf("%+v", v)
+
+	switch t := v.(type) {
+	case string:
+		return t
+	case *string:
+		return *t
+	case []byte:
+		return bytesconv.BytesToString(t)
+	case *[]byte:
+		return bytesconv.BytesToString(*t)
+	case fmt.Stringer:
+		return t.String()
+	default:
+		return fmt.Sprintf("%+v", v)
+	}
 }
 
 func GetInt(tmp interface{}) (int, error) {
@@ -57,10 +71,9 @@ func GetInt(tmp interface{}) (int, error) {
 		return 0, fmt.Errorf("数据越界:int64=>int,%d", val)
 	case string:
 		return strToint(val)
+	case fmt.Stringer:
+		return strToint(val.String())
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strToint(strer.String())
-		}
 	}
 
 	return 0, newNotSupportErr(tmp)
@@ -93,10 +106,10 @@ func GetInt64(tmp interface{}) (int64, error) {
 		return *val, nil
 	case string:
 		return strconv.ParseInt(val, 10, 64)
+	case fmt.Stringer:
+		return strconv.ParseInt(val.String(), 10, 64)
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strconv.ParseInt(strer.String(), 10, 64)
-		}
+
 	}
 
 	return 0, newNotSupportErr(tmp)
@@ -131,10 +144,11 @@ func GetUint64(tmp interface{}) (uint64, error) {
 
 	case string:
 		return strconv.ParseUint(val, 10, 64)
+
+	case fmt.Stringer:
+		return strconv.ParseUint(val.String(), 10, 64)
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strconv.ParseUint(strer.String(), 10, 64)
-		}
+
 	}
 
 	return 0, newNotSupportErr(tmp)
@@ -155,10 +169,10 @@ func GetFloat64(tmp interface{}) (float64, error) {
 		return float64(*val), nil
 	case string:
 		return strconv.ParseFloat(val, 64)
+	case fmt.Stringer:
+		return strconv.ParseFloat(val.String(), 64)
 	default:
-		if strer, ok := tmp.(fmt.Stringer); ok {
-			return strconv.ParseFloat(strer.String(), 64)
-		}
+
 	}
 
 	return 0, newNotSupportErr(tmp)
