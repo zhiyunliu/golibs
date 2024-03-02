@@ -1,4 +1,4 @@
-package xtypes
+package xreflect
 
 import (
 	"fmt"
@@ -50,7 +50,7 @@ func AnyToMap(value interface{}, opts ...StructOption) (map[string]any, error) {
 		// 如果是struct类型，遍历字段并使用json标签作为键
 		result = structToMapDepth(value, 0, options.maxDepth)
 	default:
-		return nil, fmt.Errorf("unsupported input type: %v", val.Kind())
+		return result, fmt.Errorf("unsupported input type: %v", val.Kind())
 	}
 	return result, nil
 }

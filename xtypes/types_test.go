@@ -1,41 +1,44 @@
 package xtypes
 
 import (
+	"reflect"
 	"testing"
 )
 
-type S1 struct {
-	S string
-}
+func Test_mapscan(t *testing.T) {
 
-type S2 struct {
-	S string
-}
-
-func (s S2) String() string {
-	return s.S
-}
-
-func TestGetString(t *testing.T) {
+	var val string = `{"a":1}`
+	var bytes []byte = []byte(val)
+	var eval string = `{"a":1`
+	var ebytes []byte = []byte(val)
+	var pval *string
+	var pbytes *[]byte
 
 	tests := []struct {
-		name string
-		v    interface{}
-		want string
+		name    string
+		obj     any
+		m       any
+		wantErr bool
+		expectM any
 	}{
-		{name: "1.", v: 1, want: "1"},
-		{name: "2.", v: 1.0, want: "1"},
-		{name: "3.", v: 1.1, want: "1.1"},
-		{name: "4.", v: "a", want: "a"},
-		{name: "5.", v: S1{S: "s"}, want: "{S:s}"},
-		{name: "6.", v: S2{S: "s"}, want: "s"},
+		{name: "1.", obj: nil, m: nil, wantErr: false},
+		{name: "2.", obj: bytes, m: &XMap{}, wantErr: false, expectM: &XMap{"a": float64(1)}},
+		{name: "3.", obj: val, m: &XMap{}, wantErr: false, expectM: &XMap{"a": float64(1)}},
+		{name: "4.", obj: &bytes, m: &XMap{}, wantErr: false, expectM: &XMap{"a": float64(1)}},
+		{name: "5.", obj: &val, m: &XMap{}, wantErr: false, expectM: &XMap{"a": float64(1)}},
+		{name: "6.", obj: pval, m: &XMap{}, wantErr: false, expectM: &XMap{}},
+		{name: "7.", obj: pbytes, m: &XMap{}, wantErr: false, expectM: &XMap{}},
+		{name: "8.", obj: eval, m: &XMap{}, wantErr: true, expectM: &XMap{}},
+		{name: "9.", obj: ebytes, m: &XMap{}, wantErr: true, expectM: &XMap{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetString(tt.v); got != tt.want {
-				t.Errorf("GetString() = %v, want %v", got, tt.want)
+			if err := mapscan(tt.obj, tt.m); (err != nil) != tt.wantErr {
+				t.Errorf("mapscan() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(tt.expectM, tt.m) {
+				t.Errorf("mapscan() DeepEqual  expect=%v, m=%v", tt.expectM, tt.m)
 			}
 		})
-
 	}
 }

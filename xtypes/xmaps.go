@@ -17,7 +17,7 @@ func (ms *XMaps) Append(i ...XMap) XMaps {
 }
 
 func (ms XMaps) IsEmpty() bool {
-	return ms == nil || len(ms) == 0
+	return len(ms) == 0
 }
 
 func (ms XMaps) Len() int {
@@ -34,7 +34,12 @@ func (ms XMaps) Get(idx int) XMap {
 	return map[string]interface{}{}
 }
 
+// Deprecated: As of Go v0.2.0, this function simply calls [ScanTo].
 func (ms XMaps) Scan(obj interface{}) error {
+	return ms.ScanTo(obj)
+}
+
+func (ms XMaps) ScanTo(obj interface{}) error {
 	rv := reflect.ValueOf(obj)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return &internal.XMapScanError{Type: reflect.TypeOf(obj)}
@@ -56,7 +61,7 @@ func (ms XMaps) Scan(obj interface{}) error {
 	for i := range ms {
 
 		tmp := reflect.New(structType)
-		err := ms[i].Scan(tmp.Interface())
+		err := ms[i].ScanTo(tmp.Interface())
 		if err != nil {
 			return err
 		}

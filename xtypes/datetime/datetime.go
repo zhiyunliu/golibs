@@ -2,7 +2,6 @@ package datetime
 
 import (
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"time"
 
@@ -30,7 +29,7 @@ func New(time time.Time, opts ...Option) *DateTime {
 }
 
 // MarshalJSON MarshalJSON
-func (d *DateTime) MarshalJSON() (bytes []byte, err error) {
+func (d DateTime) MarshalJSON() (bytes []byte, err error) {
 	tmpV := fmt.Sprintf(`"%s"`, d.Time.Format(d.Format()))
 	return bytesconv.StringToBytes(tmpV), nil
 }
@@ -44,17 +43,20 @@ func (d *DateTime) UnmarshalJSON(bytes []byte) error {
 	}
 
 	val, err := time.Parse(fmt.Sprintf(`"%s"`, d.opts.Format), bytesconv.BytesToString(bytes))
+	if err != nil {
+		return err
+	}
 	*d = DateTime{Time: val, opts: d.opts}
-	return err
+	return nil
 }
 
 // Format 默认2006-01-02 15:04:05
-func (d *DateTime) Format() string {
+func (d DateTime) Format() string {
 	return d.opts.Format
 }
 
 // String String
-func (d *DateTime) String() string {
+func (d DateTime) String() string {
 	return d.Time.Format(d.opts.Format)
 }
 
@@ -70,8 +72,15 @@ func (t *DateTime) Scan(v interface{}) error {
 		// 切换时区
 		tmp := New(vt.Local())
 		*t = *tmp
+	case string:
+		tmpDate, err := time.Parse(DefaultTimeformat, vt)
+		if err != nil {
+			return err
+		}
+		tmp := New(tmpDate.Local())
+		*t = *tmp
 	default:
-		return errors.New("类型处理错误")
+		return fmt.Errorf("类型处理错误:%+v", v)
 	}
 	return nil
 }
