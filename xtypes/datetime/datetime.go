@@ -46,6 +46,7 @@ func (d *DateTime) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
+	val = val.Local()
 	*d = DateTime{Time: val, opts: d.opts}
 	return nil
 }

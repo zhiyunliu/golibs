@@ -1,6 +1,7 @@
 package xtypes
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -53,5 +54,33 @@ func TestXMaps_Scan_2(t *testing.T) {
 				t.Error("反射失败")
 			}
 		})
+	}
+}
+
+func TestXMaps_Get(t *testing.T) {
+	// 初始化一个 XMaps
+	testXMaps := XMaps{
+		XMap{"name": "Alice", "age": 25},
+		XMap{"name": "Bob", "age": 30},
+	}
+
+	// 测试获取指定索引的 XMap 的方法
+	result1 := testXMaps.Get(0)
+	result2 := testXMaps.Get(1)
+	result3 := testXMaps.Get(2)
+
+	// 验证预期的结果
+	expected1 := XMap{"name": "Alice", "age": 25}
+	expected2 := XMap{"name": "Bob", "age": 30}
+	expected3 := XMap{}
+
+	if !reflect.DeepEqual(result1, expected1) {
+		t.Errorf("Get(0) returned %v, expected %v", result1, expected1)
+	}
+	if !reflect.DeepEqual(result2, expected2) {
+		t.Errorf("Get(1) returned %v, expected %v", result2, expected2)
+	}
+	if !reflect.DeepEqual(result3, expected3) {
+		t.Errorf("Get(2) returned %v, expected %v", result3, expected3)
 	}
 }

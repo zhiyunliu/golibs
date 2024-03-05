@@ -3,6 +3,8 @@ package igcmap
 import (
 	"reflect"
 	"testing"
+
+	"github.com/zhiyunliu/golibs/xtypes"
 )
 
 func TestNew(t *testing.T) {
@@ -227,5 +229,93 @@ func TestIgcMap_Equal(t *testing.T) {
 				t.Errorf("IgcMap.Equal() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestIgcMap_Scan(t *testing.T) {
+	// 测试 map[string]any 类型参数
+	mapData := map[string]interface{}{
+		"key1": "value1",
+		"key2": 123,
+	}
+	igc := &IgcMap{}
+	err := igc.Scan(mapData)
+	if err != nil {
+		t.Errorf("Scan 方法未能正确处理 map[string]any 类型参数: %v", err)
+	}
+
+	if !reflect.DeepEqual(igc.data, xtypes.XMap(mapData)) {
+		t.Errorf("Scan 方法未能正确处理 map[string]any  got:%+v,expect:%+v", igc.data, mapData)
+	}
+
+	// 测试 xtypes.XMap 类型参数
+	xtMap := xtypes.XMap{"key1": "value1", "key2": 123}
+	err = igc.Scan(xtMap)
+	if err != nil {
+		t.Errorf("Scan 方法未能正确处理 xtypes.XMap 类型参数: %v", err)
+	}
+
+	if !reflect.DeepEqual(igc.data, xtypes.XMap(mapData)) {
+		t.Errorf("Scan 方法未能正确处理 map[string]any  got:%+v,expect:%+v", igc.data, mapData)
+	}
+
+	expectMapData := map[string]interface{}{
+		"key1": "value1",
+		"key2": float64(123),
+	}
+
+	// 测试 []byte 类型参数
+	jsonBytes := []byte(`{"key1": "value1", "key2": 123}`)
+	err = igc.Scan(jsonBytes)
+	if err != nil {
+		t.Errorf("Scan 方法未能正确处理 []byte 类型参数: %v", err)
+	}
+
+	if !reflect.DeepEqual(igc.data, xtypes.XMap(expectMapData)) {
+		t.Errorf("Scan 方法未能正确处理 map[string]any  got:%+v,expect:%+v", igc.data, mapData)
+	}
+
+	// 测试 string 类型参数
+	jsonString := `{"key1": "value1", "key2": 123}`
+	err = igc.Scan(jsonString)
+	if err != nil {
+		t.Errorf("Scan 方法未能正确处理 string 类型参数: %v", err)
+	}
+
+	if !reflect.DeepEqual(igc.data, xtypes.XMap(expectMapData)) {
+		t.Errorf("Scan 方法未能正确处理 map[string]any  got:%+v,expect:%+v", igc.data, mapData)
+	}
+
+	// 测试其他类型参数
+	err = igc.Scan("123") // 传入一个无法处理的参数
+	if err == nil {
+		t.Errorf("1Scan 方法未返回错误信息来处理无法处理的参数")
+	}
+
+	// 测试其他类型参数
+	err = igc.Scan([]byte(`123`)) // 传入一个无法处理的参数
+	if err == nil {
+		t.Errorf("2Scan 方法未返回错误信息来处理无法处理的参数")
+	}
+
+	// 测试其他类型参数
+	err = igc.Scan(123) // 传入一个无法处理的参数
+	if err == nil {
+		t.Errorf("3Scan 方法未返回错误信息来处理无法处理的参数")
+	}
+}
+
+func TestIgcMap_String(t *testing.T) {
+	// 准备测试数据
+	testData := xtypes.XMap{"key1": "value1", "key2": 123}
+	igc := IgcMap{data: testData}
+
+	// 调用 String 方法
+	result := igc.String()
+
+	// 对比结果
+	expectedResult := `{"key1":"value1","key2":123}`
+	if result != expectedResult {
+		t.Errorf("String 方法返回结果错误")
 	}
 }

@@ -29,7 +29,7 @@ func Test_mapscan(t *testing.T) {
 		{name: "6.", obj: pval, m: &XMap{}, wantErr: false, expectM: &XMap{}},
 		{name: "7.", obj: pbytes, m: &XMap{}, wantErr: false, expectM: &XMap{}},
 		{name: "8.", obj: eval, m: &XMap{}, wantErr: true, expectM: &XMap{}},
-		{name: "9.", obj: ebytes, m: &XMap{}, wantErr: true, expectM: &XMap{}},
+		{name: "9.", obj: ebytes, m: &XMap{}, wantErr: false, expectM: &XMap{"a": float64(1)}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

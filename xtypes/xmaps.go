@@ -28,10 +28,7 @@ func (ms XMaps) Get(idx int) XMap {
 	if idx < 0 || len(ms) <= idx {
 		return map[string]interface{}{}
 	}
-	if len(ms) > idx {
-		return ms[idx]
-	}
-	return map[string]interface{}{}
+	return ms[idx]
 }
 
 // Deprecated: As of Go v0.2.0, this function simply calls [ScanTo].
