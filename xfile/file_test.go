@@ -1,6 +1,7 @@
 package xfile
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,4 +34,41 @@ func Test_getAbsFilePath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateFile(t *testing.T) {
+	// Testing with a valid file path
+	validPath := "testdata/testfile.txt"
+	f, err := CreateFile(validPath)
+	if err != nil {
+		t.Errorf("Expected no error, but got: %v", err)
+	}
+	defer f.Close()
+	_, fileErr := os.Stat(validPath)
+	if os.IsNotExist(fileErr) {
+		t.Errorf("Expected file to be created, but it was not found")
+	}
+
+}
+
+func TestReadFile(t *testing.T) {
+	// Testing with a valid file path to create a new file
+	validPath := "testdata/testfile.txt"
+	f, err := ReadFile(validPath)
+	if err != nil {
+		t.Errorf("Expected no error, but got: %v", err)
+	}
+	defer f.Close()
+	_, fileErr := os.Stat(validPath)
+	if os.IsNotExist(fileErr) {
+		t.Errorf("Expected file to be created, but it was not found")
+	}
+
+	// Testing with an existing file path to open the file
+	existingPath := "testdata/example.txt"
+	f, err = ReadFile(existingPath)
+	if err != nil {
+		t.Errorf("Expected no error, but got: %v", err)
+	}
+	defer f.Close()
 }

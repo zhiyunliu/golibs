@@ -46,7 +46,7 @@ func (s sortString) Less(i, j int) bool {
 	return s[i] < s[j]
 }
 
-//Match 构建模糊匹配缓存查找管理器
+// Match 构建模糊匹配缓存查找管理器
 type Match struct {
 	mutex     sync.Mutex
 	cache     *matchCacheWrap
@@ -72,7 +72,7 @@ func (w *matchCacheWrap) SetIfAbsent(key string, val interface{}) {
 	w.cacheMap.SetIfAbsent(key, val)
 }
 
-//NewMatch 构建模糊匹配缓存查找管理器
+// NewMatch 构建模糊匹配缓存查找管理器
 func NewMatch(pathList []string, opts ...Option) *Match {
 	m := &Match{
 		cache: &matchCacheWrap{
@@ -94,7 +94,7 @@ func (m *Match) CanUseCache() bool {
 	return m.cache.enbale
 }
 
-//Match Match
+// Match Match
 func (m *Match) Match(path string, spls ...string) (match bool, pattern string) {
 	sep := "/"
 	if len(spls) > 0 {

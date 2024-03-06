@@ -58,9 +58,10 @@ func TestTranslateObject(t *testing.T) {
 		data interface{}
 		want string
 	}{
+		{name: "1.str", tpl: "aaa:bbb:@ccc", data: []byte("100"), want: ""},
 		{name: "2.str", tpl: "aaa:bbb:@ccc", data: map[string]string{"ccc": "100"}, want: "aaa:bbb:100"},
-		{name: "2.str", tpl: "aaa:bbb:@ccc", data: map[string]interface{}{"ccc": "100"}, want: "aaa:bbb:100"},
-		{name: "2.str", tpl: "aaa:bbb:@ccc", data: struct {
+		{name: "3.str", tpl: "aaa:bbb:@ccc", data: map[string]interface{}{"ccc": "100"}, want: "aaa:bbb:100"},
+		{name: "4.str", tpl: "aaa:bbb:@ccc", data: struct {
 			CCC string `json:"ccc"`
 		}{
 			CCC: "100",
