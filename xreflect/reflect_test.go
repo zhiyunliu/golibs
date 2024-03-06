@@ -17,7 +17,7 @@ type MyStruct struct {
 func Test_ReflectSet(t *testing.T) {
 
 	// 创建结构体实例
-	var myInstance *MyStruct
+	var myInstance *MyStruct = new(MyStruct)
 
 	// 创建字段名称和值的映射
 	fieldValues := map[string]interface{}{
@@ -33,7 +33,6 @@ func Test_ReflectSet(t *testing.T) {
 	for fieldName, value := range fieldValues {
 		setStructField(myInstance, fieldName, value)
 	}
-
 	// 输出赋值后的结构体实例
 	fmt.Println(myInstance)
 }

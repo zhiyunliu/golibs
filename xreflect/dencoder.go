@@ -227,6 +227,9 @@ func mapScanDecoder(v reflect.Value, val any) error {
 }
 
 func mapDecoder(v reflect.Value, val any) error {
+	if val == nil {
+		return nil
+	}
 	if v.IsNil() {
 		if v.Kind() == reflect.Pointer {
 			ftyp := v.Type().Elem()
@@ -238,6 +241,26 @@ func mapDecoder(v reflect.Value, val any) error {
 			v.Set(reflect.MakeMap(v.Type()))
 		}
 	}
+
+	refVal := reflect.ValueOf(val)
+	if refVal.IsNil() || refVal.IsZero() {
+		return nil
+	}
+
+	ftype := v.Type()
+	switch {
+	case ftype == refVal.Type():
+		v.Set(refVal)
+		return nil
+	case ftype.Kind() == reflect.Pointer && ftype.Elem() == refVal.Type():
+		v.Elem().Set(refVal)
+		return nil
+
+	case refVal.Kind() == reflect.Pointer && ftype == refVal.Elem().Type():
+		v.Set(refVal.Elem())
+		return nil
+	}
+
 	return mapScanDecoder(v, val)
 }
 
@@ -289,9 +312,20 @@ func (ae arrayDecoder) dencode(v reflect.Value, val any) error {
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
+
+	//先检查MapScanner 避免xmaps坑
 	if v.CanConvert(mapScannerType) {
 		return mapScanDecoder(v, val)
 	}
+
+	if v.CanConvert(scannerType) {
+		return v.Interface().(sql.Scanner).Scan(val)
+	}
+
+	if v.CanAddr() && v.Addr().CanConvert(scannerType) {
+		return v.Addr().Interface().(sql.Scanner).Scan(val)
+	}
+
 	rv := reflect.ValueOf(val)
 	if rv.Kind() == reflect.Pointer && rv.IsNil() {
 		return nil
@@ -321,6 +355,9 @@ func newArrayDecoder(t reflect.Type) dencoderFunc {
 // }
 
 func structDecoder(v reflect.Value, val any) error {
+	if val == nil {
+		return nil
+	}
 	refVal := reflect.ValueOf(val)
 	if refVal.IsZero() {
 		return nil

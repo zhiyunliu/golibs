@@ -35,6 +35,10 @@ func TestAnyToMap(t *testing.T) {
 	result, err := AnyToMap(obj)
 	assert.Equal(t, nil, err, "TestAnyToMap not error")
 	assert.Equal(t, expected, result, "TestAnyToMap should convert struct to map correctly")
+
+	result, err = AnyToMap(expected)
+	assert.Equal(t, nil, err, "TestAnyToMap not error")
+	assert.Equal(t, expected, result, "TestAnyToMap should convert struct to map correctly")
 }
 
 func TestAnyToMapWithPointer(t *testing.T) {
