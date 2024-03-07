@@ -42,23 +42,25 @@ func (d *DateTime) UnmarshalJSON(bytes []byte) error {
 		}
 	}
 
-	val, err := time.Parse(fmt.Sprintf(`"%s"`, d.opts.Format), bytesconv.BytesToString(bytes))
+	val, err := time.ParseInLocation(fmt.Sprintf(`"%s"`, d.opts.Format), bytesconv.BytesToString(bytes), time.Local)
 	if err != nil {
 		return err
 	}
-	val = val.Local()
 	*d = DateTime{Time: val, opts: d.opts}
 	return nil
 }
 
 // Format 默认2006-01-02 15:04:05
 func (d DateTime) Format() string {
+	if d.opts == nil {
+		return DefaultTimeformat
+	}
 	return d.opts.Format
 }
 
 // String String
 func (d DateTime) String() string {
-	return d.Time.Format(d.opts.Format)
+	return d.Time.Format(d.Format())
 }
 
 // Value String
@@ -71,17 +73,43 @@ func (t *DateTime) Scan(v interface{}) error {
 	case time.Time:
 		// 字符串转成 time.Time 类型
 		// 切换时区
-		tmp := New(vt.Local())
+		tmp := New(transferTolocal(vt))
+		*t = *tmp
+	case *time.Time:
+		// 字符串转成 time.Time 类型
+		// 切换时区
+		tmp := New(transferTolocal(*vt))
 		*t = *tmp
 	case string:
-		tmpDate, err := time.Parse(DefaultTimeformat, vt)
+		tmpDate, err := time.ParseInLocation(DefaultTimeformat, vt, time.Local)
 		if err != nil {
 			return err
 		}
-		tmp := New(tmpDate.Local())
+		tmp := New(tmpDate)
+		*t = *tmp
+	case *string:
+		tmpDate, err := time.ParseInLocation(DefaultTimeformat, *vt, time.Local)
+		if err != nil {
+			return err
+		}
+		tmp := New(tmpDate)
 		*t = *tmp
 	default:
 		return fmt.Errorf("类型处理错误:%+v", v)
 	}
 	return nil
+}
+
+// UTC时间转换为北京时间
+func TransferUtcToCts8(t time.Time) time.Time {
+	// 解析数据库时间相关的字段没有时区，默认转换成了UTC时间
+	cstTime := t.In(time.Local)
+	cstTime = cstTime.Add(-time.Hour * 8)
+	return cstTime
+}
+
+func transferTolocal(t time.Time) time.Time {
+	timeStr := t.Format("2006-01-02 15:04:05")
+	t1, _ := time.ParseInLocation("2006-01-02 15:04:05", timeStr, time.Local)
+	return t1
 }

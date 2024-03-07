@@ -73,20 +73,45 @@ func unsupportedTypeEncoder(v reflect.Value) any {
 }
 
 func boolEncoder(v reflect.Value) any {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
+
 	return v.Bool()
 }
 
 func intEncoder(v reflect.Value) any {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
 	return v.Int()
 }
 
 func uintEncoder(v reflect.Value) any {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
 	return v.Uint()
 }
 
 type floatEncoder int // number of bits
 
 func (bits floatEncoder) encode(v reflect.Value) any {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
 	return v.Float()
 }
 
@@ -96,10 +121,22 @@ var (
 )
 
 func stringEncoder(v reflect.Value) any {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
 	return v.String()
 }
 
 func interfaceEncoder(v reflect.Value) any {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
 	return v.Interface()
 }
 
@@ -112,7 +149,10 @@ func (se structEncoder) encode(v reflect.Value) any {
 		return unsupportedTypeEncoder(v)
 	}
 
-	if v.Kind() == reflect.Pointer {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
 		v = v.Elem()
 	}
 

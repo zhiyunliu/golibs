@@ -243,7 +243,7 @@ func mapDecoder(v reflect.Value, val any) error {
 	}
 
 	refVal := reflect.ValueOf(val)
-	if refVal.IsNil() || refVal.IsZero() {
+	if refVal.IsZero() {
 		return nil
 	}
 
@@ -309,6 +309,19 @@ type arrayDecoder struct {
 }
 
 func (ae arrayDecoder) dencode(v reflect.Value, val any) error {
+	if val == nil {
+		return nil
+	}
+
+	//todo:奇怪的逻辑，先检查MapScanner 避免xmaps坑
+	if v.CanConvert(mapScannerType) {
+		return mapScanDecoder(v, val)
+	}
+
+	if v.CanAddr() && v.Addr().CanConvert(mapScannerType) {
+		return mapScanDecoder(v.Addr(), val)
+	}
+
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
