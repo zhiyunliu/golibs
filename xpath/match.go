@@ -16,6 +16,9 @@ var tsmp = map[string]string{
 	"**": `({0}[{1}\w]+)*`,
 	"*":  `({0}[{1}\w]+)`,
 }
+var partsMp = map[string]string{
+	"*": `[{1}\w]+`,
+}
 
 type sortString []string
 
@@ -157,7 +160,7 @@ func (m *Match) getRegexp(u string, idx int, sep string) *regexp.Regexp {
 						pv = sep + nv
 					}
 				} else {
-					pv = strings.ReplaceAll(nv, `\*`, tsmp["*"])
+					pv = sep + strings.ReplaceAll(nv, `*`, partsMp["*"])
 				}
 			}
 			sl := sep
@@ -178,7 +181,6 @@ func (m *Match) processSpecial(nv string) string {
 	nv = strings.ReplaceAll(nv, "$", `\$`)
 	nv = strings.ReplaceAll(nv, "(", `\(`)
 	nv = strings.ReplaceAll(nv, ")", `\)`)
-	nv = strings.ReplaceAll(nv, "*", `\*`)
 	nv = strings.ReplaceAll(nv, "+", `\+`)
 	nv = strings.ReplaceAll(nv, ".", `\.`)
 	nv = strings.ReplaceAll(nv, "[", `\[`)
