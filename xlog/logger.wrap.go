@@ -2,6 +2,7 @@ package xlog
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 
@@ -32,7 +33,7 @@ var (
 func init() {
 	_loggerPool = &sync.Pool{
 		New: func() interface{} {
-			return New()
+			return newLogger()
 		},
 	}
 	_writerPipes = make(WriterPipes, 0)
@@ -40,7 +41,7 @@ func init() {
 }
 
 // New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
-func New(opt ...Option) (logger Logger) {
+func newLogger(opt ...Option) (logger Logger) {
 	wrapper := &LoggerWrap{}
 	opts := &options{
 		data: map[string]string{},
@@ -161,7 +162,7 @@ func (logger *LoggerWrap) Errorf(format string, args ...interface{}) {
 func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			sysLogger.Panicf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
+			log.Printf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
 	if _hasClosed {
@@ -175,7 +176,7 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			sysLogger.Panicf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
+			log.Printf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
 	if _hasClosed {
@@ -191,7 +192,7 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 func loopWriteEvent(pipe *WriterPipe) {
 	for {
 		select {
-		case <-pipe.completeChan:
+		case <-pipe.ctx.Done():
 			return
 		case v, ok := <-pipe.eventsChan:
 			if !ok {

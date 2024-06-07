@@ -1,16 +1,18 @@
 package xlog
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 )
 
 type WriterPipe struct {
-	completeChan chan struct{}
-	eventsChan   chan *Event
-	onceLock     sync.Once
-	closed       bool
+	ctx        context.Context
+	ctxCancel  context.CancelFunc
+	eventsChan chan *Event
+	onceLock   sync.Once
+	closed     bool
 }
 
 type WriterPipes []*WriterPipe
@@ -19,10 +21,14 @@ func newWriterPipe() *WriterPipe {
 	if BufferSize <= 0 {
 		panic(fmt.Errorf("WriterPipe xlog.BufferSize must more than 0"))
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &WriterPipe{
-		completeChan: make(chan struct{}),
-		eventsChan:   make(chan *Event, BufferSize),
-		closed:       false,
+		ctx:        ctx,
+		ctxCancel:  cancel,
+		eventsChan: make(chan *Event, BufferSize),
+		closed:     false,
 	}
 }
 
@@ -35,7 +41,9 @@ func (p *WriterPipe) Close() error {
 }
 
 func (p *WriterPipe) complete() error {
-	close(p.completeChan)
+	if p.ctxCancel != nil {
+		p.ctxCancel()
+	}
 	return nil
 }
 
@@ -69,7 +77,7 @@ func (ps WriterPipes) CloseAndWait() {
 	for _, p := range ps {
 
 		go func(w *WriterPipe) {
-			<-w.completeChan
+			<-w.ctx.Done()
 			group.Done()
 		}(p)
 		p.Close()

@@ -13,6 +13,13 @@ var (
 	_cfglocker = sync.Mutex{}
 )
 
+func init() {
+	err := reconfigLogWriter(DefaultParam)
+	if err != nil {
+		log.Println("reconfigLogWriter.asyncWrite:", err)
+	}
+}
+
 type Writer func(content ...interface{})
 
 func (l Writer) Write(p []byte) (n int, err error) {
@@ -24,10 +31,10 @@ func getStack() string {
 	return xstack.GetStack(StackSkip)
 }
 
-//默认appender写入器
+// 默认appender写入器
 var _mainWriter = newlogWriter()
 
-//AppenderList 获取列表
+// AppenderList 获取列表
 func AppenderList() []string {
 	result := make([]string, len(_mainWriter.appenders))
 	idx := 0
@@ -38,12 +45,7 @@ func AppenderList() []string {
 }
 
 func asyncWrite(event *Event) {
-	if !_defaultParam.inited {
-		err := reconfigLogWriter(_defaultParam)
-		if err != nil {
-			log.Println("reconfigLogWriter.asyncWrite:", err)
-		}
-	}
+
 	_mainWriter.Log(event)
 }
 
@@ -55,17 +57,14 @@ func reconfigLogWriter(param *Param) error {
 	}
 	param.inited = true
 
-	layoutSetting, err := loadLayout(param.ConfigPath, _etcPath)
+	layoutSetting, err := loadLayout(param.ConfigPath)
 	if err != nil {
 		return err
 	}
-	newAppenderMap := make(map[string]Appender)
 	for apn, layout := range layoutSetting.Layout {
 		if tmp, ok := _appenderCache.Load(apn); ok {
-			newAppenderMap[apn] = tmp.(AppenderBuilder).Build(layout)
+			_mainWriter.Attach(tmp.(AppenderBuilder).Build(layout))
 		}
 	}
-
-	_mainWriter.RebuildAppender(newAppenderMap)
 	return nil
 }

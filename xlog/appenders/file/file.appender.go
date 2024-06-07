@@ -6,6 +6,7 @@ import (
 	"time"
 
 	cmap "github.com/orcaman/concurrent-map"
+	"github.com/zhiyunliu/golibs/xlog"
 )
 
 const File string = "file"
@@ -15,18 +16,18 @@ const (
 	_clearInterval  = time.Second * 30
 )
 
-//FileAppender 文件FileAppender
+// FileAppender 文件FileAppender
 type FileAppender struct {
 	writers       cmap.ConcurrentMap
 	cleanTicker   *time.Ticker
 	cleanInterval time.Duration
 	closeChan     chan struct{}
 	onceLock      sync.Once
-	layout        *Layout
+	layout        *xlog.Layout
 }
 
 func init() {
-	Registry(&fileApderBuilder{})
+	xlog.RegistryBuilder(&fileApderBuilder{})
 }
 
 type fileApderBuilder struct {
@@ -35,10 +36,8 @@ type fileApderBuilder struct {
 func (b *fileApderBuilder) Name() string {
 	return File
 }
-func (b *fileApderBuilder) DefaultLayout() *Layout {
-	return &Layout{LevelName: LevelInfo.Name(), Path: _logfilePath, Content: _defaultLayout}
-}
-func (b *fileApderBuilder) Build(layout *Layout) Appender {
+
+func (b *fileApderBuilder) Build(layout *xlog.Layout) xlog.Appender {
 	a := &FileAppender{
 		closeChan:     make(chan struct{}),
 		writers:       cmap.New(),
@@ -55,11 +54,11 @@ func (a *FileAppender) Name() string {
 	return File
 }
 
-func (a *FileAppender) Layout() *Layout {
+func (a *FileAppender) Layout() *xlog.Layout {
 	return a.layout
 }
 
-func (a *FileAppender) Write(event *Event) error {
+func (a *FileAppender) Write(event *xlog.Event) error {
 	filePath := event.Transform(a.layout.Path, false)
 	res := a.writers.Upsert(filePath, nil, func(exists bool, oldval, newval interface{}) interface{} {
 		if exists {
@@ -67,17 +66,19 @@ func (a *FileAppender) Write(event *Event) error {
 		}
 		writer, err := newFileWriter(filePath, a.layout)
 		if err != nil {
-			err = fmt.Errorf("创建FileWriter.Path=%s.Error:%+v", filePath, err)
-			panic(err)
+			return fmt.Errorf("创建FileWriter.Path=%s.Error:%+v", filePath, err)
 		}
 		return writer
-
 	})
+	if err, ok := res.(error); ok {
+		return err
+	}
+
 	res.(*fileWriter).Write(event)
 	return nil
 }
 
-//Close 关闭组件
+// Close 关闭组件
 func (a *FileAppender) Close() error {
 	a.onceLock.Do(func() {
 		close(a.closeChan)
@@ -104,13 +105,17 @@ func (a *FileAppender) cleanWriters() {
 	a.writers.IterCb(func(key string, value interface{}) {
 		lastwrite := value.(*fileWriter).lastWrite
 		if time.Since(lastwrite) >= _clearTimeRange {
-			value.(*fileWriter).Close()
 			remvesList = append(remvesList, key)
 			return
 		}
 	})
 
 	for i := range remvesList {
+		value, ok := a.writers.Get(remvesList[i])
+		if !ok {
+			continue
+		}
 		a.writers.Remove(remvesList[i])
+		value.(*fileWriter).Close()
 	}
 }

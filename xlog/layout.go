@@ -45,18 +45,16 @@ func Encode(path string, setting *layoutSetting) error {
 
 // Decode 从配置文件中读取配置信息
 func Decode(path string) (*layoutSetting, error) {
-	l := &layoutSetting{
+	setting := &layoutSetting{
 		Enable: true,
-		Layout: map[string]*Layout{
-			File: {LevelName: LevelInfo.FullName(), Path: _logfilePath, Content: _defaultLayout},
-		},
+		Layout: map[string]*Layout{},
 	}
 	fileBytes, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取配置文件失败:%s %w", path, err)
 	}
-	err = json.Unmarshal(fileBytes, l)
-	return l, err
+	err = json.Unmarshal(fileBytes, setting)
+	return setting, err
 }
 
 func loadLayout(paths ...string) (setting *layoutSetting, err error) {
@@ -75,9 +73,7 @@ func loadLayout(paths ...string) (setting *layoutSetting, err error) {
 	if !xfile.Exists(path) {
 		setting = &layoutSetting{Enable: true, Layout: map[string]*Layout{}}
 		_appenderCache.Range(func(key, value interface{}) bool {
-			builder := value.(AppenderBuilder)
-			name := fmt.Sprintf("%s", key)
-			setting.Layout[name] = builder.DefaultLayout()
+			setting.Layout[fmt.Sprintf("%s", key)] = &DefaultParam.Layout
 			return true
 		})
 

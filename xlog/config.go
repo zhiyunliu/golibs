@@ -3,26 +3,25 @@ package xlog
 import "log"
 
 var (
-	_confPath    = "../conf/logger.json"
-	_etcPath     = "../etc/logger.json"
-	_logfilePath = "../log/%ndate/%level/%hh.log"
-
-	_defaultParam = &Param{
+	DefaultParam = &Param{
 		inited:     false,
-		ConfigPath: _etcPath,
+		ConfigPath: "../etc/logger.json",
+		Layout: Layout{
+			LevelName: LevelInfo.FullName(), Path: "../log/%ndate/%level/%hh.log", Content: "[%datetime][%l][%session][%idx] %content",
+		},
 	}
 )
 
 type Param struct {
 	inited     bool
 	ConfigPath string
+	Layout     Layout
 }
 
 func Config(p *Param) {
 	p.inited = true
-	_defaultParam.inited = true
 	if p.ConfigPath == "" {
-		p.ConfigPath = _defaultParam.ConfigPath
+		p.ConfigPath = DefaultParam.ConfigPath
 	}
 	err := reconfigLogWriter(p)
 	if err != nil {
