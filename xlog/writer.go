@@ -1,24 +1,10 @@
 package xlog
 
 import (
-	"log"
-	"sync"
-
 	"github.com/zhiyunliu/golibs/xstack"
 )
 
 const StackSkip = 5
-
-var (
-	_cfglocker = sync.Mutex{}
-)
-
-func init() {
-	err := reconfigLogWriter(DefaultParam)
-	if err != nil {
-		log.Println("reconfigLogWriter.asyncWrite:", err)
-	}
-}
 
 type Writer func(content ...interface{})
 
@@ -45,26 +31,5 @@ func AppenderList() []string {
 }
 
 func asyncWrite(event *Event) {
-
 	_mainWriter.Log(event)
-}
-
-func reconfigLogWriter(param *Param) error {
-	_cfglocker.Lock()
-	defer _cfglocker.Unlock()
-	if param.inited {
-		return nil
-	}
-	param.inited = true
-
-	layoutSetting, err := loadLayout(param.ConfigPath)
-	if err != nil {
-		return err
-	}
-	for apn, layout := range layoutSetting.Layout {
-		if tmp, ok := _appenderCache.Load(apn); ok {
-			_mainWriter.Attach(tmp.(AppenderBuilder).Build(layout))
-		}
-	}
-	return nil
 }

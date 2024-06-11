@@ -1,4 +1,4 @@
-package stdout
+package console
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/zhiyunliu/golibs/xlog"
-	"github.com/zhiyunliu/golibs/xlog/appenders/stdout/log"
+	"github.com/zhiyunliu/golibs/xlog/appenders/console/log"
 )
 
 // stdWriter 控制台输出器

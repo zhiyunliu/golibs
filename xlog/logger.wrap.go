@@ -5,8 +5,6 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
-
-	"bytes"
 )
 
 // Logger 日志对象
@@ -37,7 +35,6 @@ func init() {
 		},
 	}
 	_writerPipes = make(WriterPipes, 0)
-	adjustmentWriteRoutine(1)
 }
 
 // New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
@@ -168,9 +165,9 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 	if _hasClosed {
 		return
 	}
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprintf(format, args...), logger.opts.data)
-	atomic.AddInt32(&logger.idx, 1)
-	event.Idx = logger.idx
+	event := GetEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprintf(format, args...), logger.opts.data)
+	newIdx := atomic.AddInt32(&logger.idx, 1)
+	event.Idx = newIdx
 	_writerPipes.Write(event)
 }
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
@@ -183,10 +180,27 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 		return
 	}
 
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, getString(args...), logger.opts.data)
-	atomic.AddInt32(&logger.idx, 1)
-	event.Idx = logger.idx
+	event := GetEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprint(args...), logger.opts.data)
+	newIdx := atomic.AddInt32(&logger.idx, 1)
+	event.Idx = newIdx
 	_writerPipes.Write(event)
+}
+
+func GetLogger(opts ...Option) Logger {
+	log := _loggerPool.Get().(*LoggerWrap)
+	for i := range opts {
+		opts[i](log.opts)
+	}
+	return log
+}
+
+// Close 关闭所有日志组件
+func Close() {
+	_closeLock.Do(func() {
+		_hasClosed = true
+		_writerPipes.CloseAndWait()
+		_mainWriter.Close()
+	})
 }
 
 func loopWriteEvent(pipe *WriterPipe) {
@@ -236,6 +250,8 @@ func adjustmentWriteRoutine(cnt int) {
 	}
 }
 
+/*
+
 func getString(c ...interface{}) string {
 	if len(c) == 1 {
 		return fmt.Sprintf("%+v", c[0])
@@ -250,19 +266,4 @@ func getString(c ...interface{}) string {
 	return buf.String()
 }
 
-func GetLogger(opts ...Option) Logger {
-	log := _loggerPool.Get().(*LoggerWrap)
-	for i := range opts {
-		opts[i](log.opts)
-	}
-	return log
-}
-
-// Close 关闭所有日志组件
-func Close() {
-	_closeLock.Do(func() {
-		_hasClosed = true
-		_writerPipes.CloseAndWait()
-		_mainWriter.Close()
-	})
-}
+*/

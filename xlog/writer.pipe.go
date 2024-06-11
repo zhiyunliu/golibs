@@ -48,9 +48,10 @@ func (p *WriterPipe) complete() error {
 }
 
 func (ps WriterPipes) Write(evt *Event) error {
-	idx := int(time.Now().UnixMicro() % int64(len(ps)))
+	lenVal := len(ps)
+	idx := int(time.Now().UnixMilli() % int64(lenVal))
 	p := ps[0]
-	if len(ps) > idx {
+	if lenVal > idx {
 		p = ps[idx]
 	}
 	if p.closed {
