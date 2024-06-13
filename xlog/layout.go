@@ -11,11 +11,12 @@ import (
 // Layout 输出器
 type Layout struct {
 	//Type      string `json:"type"`
-	LevelName string `json:"level" valid:"in(off|info|warn|error|panic|fatal|debug|all)"`
-	Path      string `json:"path,omitempty"`
-	Content   string `json:"content"`
-	Level     Level  `json:"-"`
-	isJson    bool   `json:"-"`
+	LevelName string          `json:"level" valid:"in(off|info|warn|error|panic|fatal|debug|all)"`
+	Path      string          `json:"path,omitempty"`
+	Content   string          `json:"content"`
+	ExtParams json.RawMessage `json:"ext_params,omitempty"`
+	Level     Level           `json:"-"`
+	isJson    bool            `json:"-"`
 }
 
 func (l *Layout) Init() {

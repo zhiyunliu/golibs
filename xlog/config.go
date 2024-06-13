@@ -1,10 +1,7 @@
 package xlog
 
 import (
-	"encoding/json"
 	"sync"
-
-	"github.com/zhiyunliu/golibs/session"
 )
 
 var (
@@ -37,27 +34,20 @@ func Config(opts ...ConfigOption) (err error) {
 	}
 	adjustmentWriteRoutine(cfgParam.Concurrency)
 
-	setting, err := reconfigLog(cfgParam)
+	err = reconfigLog(cfgParam)
 	if err != nil {
 		return
 	}
-	cfgData := map[string]any{
-		"default": cfgParam,
-		"setting": setting,
-	}
-	configContent, _ := json.Marshal(cfgData)
-
-	_mainWriter.Log(GetEvent("config", LevelInfo, session.Create(), "sys", string(configContent), nil))
 	return err
 }
 
-func reconfigLog(param *ConfigParam) (setting *LayoutSetting, err error) {
+func reconfigLog(param *ConfigParam) (err error) {
 	_cfglocker.Lock()
 	defer _cfglocker.Unlock()
 
-	setting, err = loadLayout(param.ConfigPath)
+	setting, err := loadLayout(param.ConfigPath)
 	if err != nil {
-		return setting, err
+		return err
 	}
 	_globalPause = !setting.Enable
 
@@ -66,7 +56,7 @@ func reconfigLog(param *ConfigParam) (setting *LayoutSetting, err error) {
 			_mainWriter.Attach(tmp.(AppenderBuilder).Build(layout))
 		}
 	}
-	return setting, nil
+	return nil
 }
 
 // ConfigOption is a function that sets a configuration option.

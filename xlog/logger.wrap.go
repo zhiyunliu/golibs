@@ -34,7 +34,7 @@ func init() {
 			return newLogger()
 		},
 	}
-	_writerPipes = make(WriterPipes, 0)
+	_writerPipes = WriterPipes{newWriterPipe()}
 }
 
 // New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
@@ -185,6 +185,8 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	event.Idx = newIdx
 	_writerPipes.Write(event)
 }
+
+var New = GetLogger
 
 func GetLogger(opts ...Option) Logger {
 	log := _loggerPool.Get().(*LoggerWrap)
