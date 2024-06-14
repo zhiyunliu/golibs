@@ -45,7 +45,7 @@ type Event struct {
 }
 
 // NewEvent 构建日志事件
-func NewEvent(name string, level Level, session string, srvType string, content string, tags map[string]string) *Event {
+func GetEvent(name string, level Level, session string, srvType string, content string, tags map[string]string) *Event {
 	e := eventPool.Get().(*Event)
 	e.LogTime = time.Now()
 	e.Level = level

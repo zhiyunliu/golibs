@@ -3,17 +3,20 @@ package xlog
 import (
 	"bufio"
 	"io"
+	"log"
 	"sync"
 	"time"
+
+	"github.com/zhiyunliu/golibs/xlog"
 
 	"github.com/zhiyunliu/golibs/xfile"
 )
 
-//writer 文件输出器
+// writer 文件输出器
 type fileWriter struct {
 	writer     *bufio.Writer
 	lastWrite  time.Time
-	layout     *Layout
+	layout     *xlog.Layout
 	interval   time.Duration
 	file       io.WriteCloser
 	ticker     *time.Ticker
@@ -21,12 +24,12 @@ type fileWriter struct {
 	onceLock   sync.Once
 	countChan  chan struct{}
 	closeChan  chan struct{}
-	Level      Level
+	Level      xlog.Level
 	writeCount uint
 }
 
-//newwriter 构建基于文件流的日志输出对象,使用带缓冲区的文件写入，缓存区达到4K或每隔3秒写入一次文件。
-func newFileWriter(path string, layout *Layout) (fa *fileWriter, err error) {
+// newwriter 构建基于文件流的日志输出对象,使用带缓冲区的文件写入，缓存区达到4K或每隔3秒写入一次文件。
+func newFileWriter(path string, layout *xlog.Layout) (fa *fileWriter, err error) {
 	fa = &fileWriter{
 		layout:    layout,
 		interval:  time.Second * 3,
@@ -46,8 +49,8 @@ func newFileWriter(path string, layout *Layout) (fa *fileWriter, err error) {
 	return
 }
 
-//Write 写入日志
-func (f *fileWriter) Write(event *Event) {
+// Write 写入日志
+func (f *fileWriter) Write(event *xlog.Event) {
 	if f.Level > event.Level {
 		return
 	}
@@ -63,7 +66,7 @@ func (f *fileWriter) Write(event *Event) {
 	f.lastWrite = time.Now()
 }
 
-//Close 关闭当前appender
+// Close 关闭当前appender
 func (f *fileWriter) Close() {
 	if f == nil {
 		return
@@ -75,7 +78,7 @@ func (f *fileWriter) Close() {
 	})
 }
 
-//writeTo 定时写入文件
+// writeTo 定时写入文件
 func (f *fileWriter) timeFlush() {
 	for {
 		select {
@@ -92,6 +95,6 @@ func (f *fileWriter) flush() {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	if err := f.writer.Flush(); err != nil {
-		sysLogger.Error("file.write.err:", err)
+		log.Printf("file.write.err:%+v", err)
 	}
 }
