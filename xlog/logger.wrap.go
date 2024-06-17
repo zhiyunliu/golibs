@@ -2,10 +2,9 @@ package xlog
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
-
-	"bytes"
 )
 
 // Logger 日志对象
@@ -32,15 +31,16 @@ var (
 func init() {
 	_loggerPool = &sync.Pool{
 		New: func() interface{} {
-			return New()
+			return newLogger()
 		},
 	}
-	_writerPipes = make(WriterPipes, 0)
-	adjustmentWriteRoutine(1)
+	pipe := newWriterPipe()
+	_writerPipes = WriterPipes{pipe}
+	go loopWriteEvent(pipe)
 }
 
 // New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
-func New(opt ...Option) (logger Logger) {
+func newLogger(opt ...Option) (logger Logger) {
 	wrapper := &LoggerWrap{}
 	opts := &options{
 		data: map[string]string{},
@@ -161,37 +161,56 @@ func (logger *LoggerWrap) Errorf(format string, args ...interface{}) {
 func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			sysLogger.Panicf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
+			log.Printf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
 	if _hasClosed {
 		return
 	}
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprintf(format, args...), logger.opts.data)
-	atomic.AddInt32(&logger.idx, 1)
-	event.Idx = logger.idx
+	event := GetEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprintf(format, args...), logger.opts.data)
+	newIdx := atomic.AddInt32(&logger.idx, 1)
+	event.Idx = newIdx
 	_writerPipes.Write(event)
 }
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			sysLogger.Panicf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
+			log.Printf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
 		}
 	}()
 	if _hasClosed {
 		return
 	}
 
-	event := NewEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, getString(args...), logger.opts.data)
-	atomic.AddInt32(&logger.idx, 1)
-	event.Idx = logger.idx
+	event := GetEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprint(args...), logger.opts.data)
+	newIdx := atomic.AddInt32(&logger.idx, 1)
+	event.Idx = newIdx
 	_writerPipes.Write(event)
+}
+
+var New = GetLogger
+
+func GetLogger(opts ...Option) Logger {
+	log := _loggerPool.Get().(*LoggerWrap)
+	for i := range opts {
+		opts[i](log.opts)
+	}
+	return log
+}
+
+// Close 关闭所有日志组件
+func Close() {
+	_closeLock.Do(func() {
+		_hasClosed = true
+		_writerPipes.CloseAndWait()
+		_mainWriter.Close()
+	})
 }
 
 func loopWriteEvent(pipe *WriterPipe) {
 	for {
 		select {
-		case <-pipe.completeChan:
+		case <-pipe.ctx.Done():
 			return
 		case v, ok := <-pipe.eventsChan:
 			if !ok {
@@ -235,6 +254,8 @@ func adjustmentWriteRoutine(cnt int) {
 	}
 }
 
+/*
+
 func getString(c ...interface{}) string {
 	if len(c) == 1 {
 		return fmt.Sprintf("%+v", c[0])
@@ -249,19 +270,4 @@ func getString(c ...interface{}) string {
 	return buf.String()
 }
 
-func GetLogger(opts ...Option) Logger {
-	log := _loggerPool.Get().(*LoggerWrap)
-	for i := range opts {
-		opts[i](log.opts)
-	}
-	return log
-}
-
-// Close 关闭所有日志组件
-func Close() {
-	_closeLock.Do(func() {
-		_hasClosed = true
-		_writerPipes.CloseAndWait()
-		_mainWriter.Close()
-	})
-}
+*/

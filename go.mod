@@ -3,6 +3,8 @@ module github.com/zhiyunliu/golibs
 go 1.18
 
 require (
+	github.com/agiledragon/gomonkey/v2 v2.11.0
+	github.com/go-playground/assert/v2 v2.2.0
 	github.com/goccy/go-json v0.9.5
 	github.com/google/uuid v1.3.0
 	github.com/json-iterator/go v1.1.12

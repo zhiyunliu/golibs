@@ -11,11 +11,12 @@ import (
 // Layout 输出器
 type Layout struct {
 	//Type      string `json:"type"`
-	LevelName string `json:"level" valid:"in(off|info|warn|error|panic|fatal|debug|all)"`
-	Path      string `json:"path,omitempty"`
-	Content   string `json:"content"`
-	Level     Level  `json:"-"`
-	isJson    bool   `json:"-"`
+	LevelName string          `json:"level" valid:"in(off|info|warn|error|panic|fatal|debug|all)"`
+	Path      string          `json:"path,omitempty"`
+	Content   string          `json:"content"`
+	ExtParams json.RawMessage `json:"ext_params,omitempty"`
+	Level     Level           `json:"-"`
+	isJson    bool            `json:"-"`
 }
 
 func (l *Layout) Init() {
@@ -23,13 +24,13 @@ func (l *Layout) Init() {
 	l.Level = TransLevel(l.LevelName)
 }
 
-type layoutSetting struct {
+type LayoutSetting struct {
 	Enable bool               `json:"enable"`
 	Layout map[string]*Layout `json:"layout"`
 }
 
 // Encode 将当前配置内容保存到文件中
-func Encode(path string, setting *layoutSetting) error {
+func Encode(path string, setting *LayoutSetting) error {
 	f, err := xfile.CreateFile(path)
 	if err != nil {
 		return fmt.Errorf("无法创建文件:%s %w", path, err)
@@ -44,22 +45,20 @@ func Encode(path string, setting *layoutSetting) error {
 }
 
 // Decode 从配置文件中读取配置信息
-func Decode(path string) (*layoutSetting, error) {
-	l := &layoutSetting{
+func Decode(path string) (*LayoutSetting, error) {
+	setting := &LayoutSetting{
 		Enable: true,
-		Layout: map[string]*Layout{
-			File: {LevelName: LevelInfo.FullName(), Path: _logfilePath, Content: _defaultLayout},
-		},
+		Layout: map[string]*Layout{},
 	}
 	fileBytes, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取配置文件失败:%s %w", path, err)
 	}
-	err = json.Unmarshal(fileBytes, l)
-	return l, err
+	err = json.Unmarshal(fileBytes, setting)
+	return setting, err
 }
 
-func loadLayout(paths ...string) (setting *layoutSetting, err error) {
+func loadLayout(paths ...string) (setting *LayoutSetting, err error) {
 	if len(paths) <= 0 {
 		return nil, fmt.Errorf("未设置日志文件配置路径")
 	}
@@ -73,19 +72,11 @@ func loadLayout(paths ...string) (setting *layoutSetting, err error) {
 	}
 
 	if !xfile.Exists(path) {
-		setting = &layoutSetting{Enable: true, Layout: map[string]*Layout{}}
+		setting = &LayoutSetting{Enable: true, Layout: map[string]*Layout{}}
 		_appenderCache.Range(func(key, value interface{}) bool {
-			builder := value.(AppenderBuilder)
-			name := fmt.Sprintf("%s", key)
-			setting.Layout[name] = builder.DefaultLayout()
+			setting.Layout[fmt.Sprintf("%s", key)] = DefaultParam.Layout
 			return true
 		})
-
-		err = Encode(path, setting)
-		if err != nil {
-			err = fmt.Errorf("创建日志配置文件失败 %v", err)
-			return
-		}
 	} else {
 		setting, err = Decode(path)
 		if err != nil {
@@ -93,7 +84,5 @@ func loadLayout(paths ...string) (setting *layoutSetting, err error) {
 			return
 		}
 	}
-
-	_globalPause = !setting.Enable
 	return
 }

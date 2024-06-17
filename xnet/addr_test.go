@@ -40,10 +40,11 @@ func TestGetAvaliableAddr(t *testing.T) {
 		wantNewAddr string
 		wantErr     bool
 	}{
-		{name: "1.", addr: ":1001", wantNewAddr: "127.0.0.1:1001", wantErr: false},
+		{name: "1.", addr: ":1001", wantNewAddr: ":1001", wantErr: false},
 		{name: "2.", addr: "[1000,2000)", wantNewAddr: "", wantErr: false},
 		{name: "3.", addr: "[1000,2000):rand", wantNewAddr: "", wantErr: false},
 		{name: "4.", addr: "[1000,2000):seq:5", wantNewAddr: "", wantErr: false},
+		{name: "5.", addr: "[1000,2000):xseq:5", wantNewAddr: "", wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -52,6 +53,10 @@ func TestGetAvaliableAddr(t *testing.T) {
 				t.Errorf("GetAvaliableAddr() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			if tt.wantErr && err != nil {
+				return
+			}
+
 			parties := strings.Split(gotNewAddr, ":")
 			nport, err := strconv.ParseInt(parties[1], 10, 64)
 			if err != nil {

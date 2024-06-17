@@ -25,6 +25,35 @@ func BenchmarkRange(t *testing.B) {
 	}
 }
 
+func TestRange(t *testing.T) {
+	tests := []struct {
+		name string
+		min  int
+		max  int
+		want int
+	}{
+		{name: "1", min: 1, max: 10, want: 0},
+		{name: "2", min: 1, max: 1, want: 1},
+		{name: "2", min: 1, max: 0, want: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Range(tt.min, tt.max)
+
+			if tt.want == 0 && !(got >= tt.min && got < tt.max) {
+				t.Errorf("name=%s Range() = %v, ", tt.name, got)
+			}
+
+			if tt.want != 0 {
+				if tt.want != got {
+					t.Errorf("name=%s Range() = %v, want %v", tt.name, got, tt.want)
+				}
+			}
+
+		})
+	}
+}
+
 func TestStr(t *testing.T) {
 
 	tests := []struct {

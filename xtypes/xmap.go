@@ -36,7 +36,12 @@ func (m XMap) Get(name string) (interface{}, bool) {
 }
 
 // Scan 以json 标签进行序列化
+// Deprecated: As of Go v0.2.0, this function simply calls [ScanTo].
 func (m XMap) Scan(obj interface{}) error {
+	return m.ScanTo(obj)
+}
+
+func (m XMap) ScanTo(obj interface{}) error {
 	bytes, _ := json.Marshal(m)
 	return json.Unmarshal(bytes, obj)
 }
