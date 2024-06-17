@@ -34,7 +34,9 @@ func init() {
 			return newLogger()
 		},
 	}
-	_writerPipes = WriterPipes{newWriterPipe()}
+	pipe := newWriterPipe()
+	_writerPipes = WriterPipes{pipe}
+	go loopWriteEvent(pipe)
 }
 
 // New 根据一个或多个日志名称构建日志对象，该日志对象具有新的session id系统不会缓存该日志组件
