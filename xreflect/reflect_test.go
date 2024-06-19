@@ -83,7 +83,7 @@ func Test_Map(t *testing.T) {
 		mapval.SetMapIndex(reflect.ValueOf("aaaa"), reflect.ValueOf("bbb"))
 		rv1.Elem().Set(mapval)
 
-		fv := reflectVal.Elem().Field(fields.List[i].Index)
+		fv := GetRealReflectVal(&fields.List[i], reflectVal)
 		fv.Set(rv1)
 
 	}
@@ -111,7 +111,8 @@ func Test_Map2(t *testing.T) {
 		mapval.SetMapIndex(reflect.ValueOf("aaaa"), reflect.ValueOf("bbb"))
 		rv1.Elem().Set(mapval)
 
-		fv := reflectVal.Elem().Field(fields.List[i].Index)
+		fv := GetRealReflectVal(&fields.List[i], reflectVal)
+
 		fv.Set(mapval)
 
 	}

@@ -191,14 +191,15 @@ func stringDecoder(v reflect.Value, val any) error {
 		rv = rv.Elem()
 	}
 	val = rv.Interface()
+	strv := GetString(val)
 
 	if v.Kind() == reflect.Pointer {
 		tmprv := reflect.New(v.Type().Elem())
-		tmprv.Elem().SetString(GetString(val))
+		tmprv.Elem().SetString(strv)
 		v.Set(tmprv)
 		return nil
 	}
-	v.SetString(GetString(val))
+	v.SetString(strv)
 	return nil
 }
 
