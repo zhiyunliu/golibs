@@ -59,7 +59,7 @@ func typeFields(t reflect.Type) *StructFields {
 			visited[f.typ] = true
 
 			// Scan f.typ for fields to include.
-			for i := 0; i < f.typ.NumField(); i++ {
+			for i, cnt := 0, f.typ.NumField(); i < cnt; i++ {
 				sf := f.typ.Field(i)
 				if sf.Anonymous {
 					t := sf.Type
@@ -89,6 +89,10 @@ func typeFields(t reflect.Type) *StructFields {
 					name = ""
 				}
 
+				index := make([]int, len(f.Index)+1)
+				copy(index, f.Index)
+				index[len(f.Index)] = i
+
 				ft := sf.Type
 				if ft.Name() == "" && ft.Kind() == reflect.Pointer {
 					// Follow pointer.
@@ -103,7 +107,7 @@ func typeFields(t reflect.Type) *StructFields {
 					field := field{
 						Name:      name,
 						fieldName: sf.Name,
-						Index:     i,
+						Index:     index,
 						typ:       ft,
 						orgtyp:    sf.Type,
 						omitEmpty: opts.Contains("omitempty"),
@@ -119,9 +123,29 @@ func typeFields(t reflect.Type) *StructFields {
 					}
 					continue
 				}
+				// Record new anonymous struct to explore in next round.
+				nextCount[ft]++
+				if nextCount[ft] == 1 {
+					next = append(next, field{Name: ft.Name(), Index: index, typ: ft})
+				}
 			}
 		}
 	}
+
+	// sort.Slice(fields, func(i, j int) bool {
+	// 	x := fields
+	// 	// sort field by name, breaking ties with depth, then
+	// 	// breaking ties with "name came from json tag", then
+	// 	// breaking ties with index sequence.
+	// 	if x[i].Name != x[j].Name {
+	// 		return x[i].Name < x[j].Name
+	// 	}
+	// 	if len(x[i].Index) != len(x[j].Index) {
+	// 		return len(x[i].Index) < len(x[j].Index)
+	// 	}
+
+	// 	return byIndex(x).Less(i, j)
+	// })
 	exactName := make(map[string]*field, len(fields))
 	for i := range fields {
 		f := &fields[i]
@@ -165,3 +189,28 @@ func typeFields(t reflect.Type) *StructFields {
 // 	}
 
 // }
+
+func GetRealReflectVal(f *field, v reflect.Value) (subv reflect.Value) {
+	subv = v
+	for _, i := range f.Index {
+		if subv.Kind() == reflect.Pointer {
+			if subv.IsNil() {
+				// If a struct embeds a pointer to an unexported type,
+				// it is not possible to set a newly allocated value
+				// since the field is unexported.
+				//
+				// See https://golang.org/issue/21357
+				if !subv.CanSet() {
+					// Invalidate subv to ensure d.value(subv) skips over
+					// the JSON value without assigning it to subv.
+					subv = reflect.Value{}
+					break
+				}
+				subv.Set(reflect.New(subv.Type().Elem()))
+			}
+			subv = subv.Elem()
+		}
+		subv = subv.Field(i)
+	}
+	return
+}

@@ -12,7 +12,7 @@ type StructFields struct {
 type field struct {
 	Name      string
 	fieldName string
-	Index     int
+	Index     []int
 	typ       reflect.Type
 	orgtyp    reflect.Type
 	//indirectType reflect.Type
@@ -69,4 +69,21 @@ type field struct {
 type FieldNewValuePool interface {
 	Get() interface{}
 	Put(interface{})
+}
+type byIndex []field
+
+func (x byIndex) Len() int { return len(x) }
+
+func (x byIndex) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+
+func (x byIndex) Less(i, j int) bool {
+	for k, xik := range x[i].Index {
+		if k >= len(x[j].Index) {
+			return false
+		}
+		if xik != x[j].Index[k] {
+			return xik < x[j].Index[k]
+		}
+	}
+	return len(x[i].Index) < len(x[j].Index)
 }
