@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"sort"
 	"sync"
 )
 
@@ -132,63 +133,38 @@ func typeFields(t reflect.Type) *StructFields {
 		}
 	}
 
-	// sort.Slice(fields, func(i, j int) bool {
-	// 	x := fields
-	// 	// sort field by name, breaking ties with depth, then
-	// 	// breaking ties with "name came from json tag", then
-	// 	// breaking ties with index sequence.
-	// 	if x[i].Name != x[j].Name {
-	// 		return x[i].Name < x[j].Name
-	// 	}
-	// 	if len(x[i].Index) != len(x[j].Index) {
-	// 		return len(x[i].Index) < len(x[j].Index)
-	// 	}
+	sort.Slice(fields, func(i, j int) bool {
+		x := fields
+		// sort field by name, breaking ties with depth, then
+		// breaking ties with "name came from json tag", then
+		// breaking ties with index sequence.
+		if x[i].Name != x[j].Name {
+			return x[i].Name < x[j].Name
+		}
+		if len(x[i].Index) != len(x[j].Index) {
+			return len(x[i].Index) < len(x[j].Index)
+		}
 
-	// 	return byIndex(x).Less(i, j)
-	// })
+		return byIndex(x).Less(i, j)
+	})
+
+	embedMap := make(map[string][]*field)
 	exactName := make(map[string]*field, len(fields))
 	for i := range fields {
 		f := &fields[i]
-		exactName[f.Name] = &fields[i]
-		f.Encoder = typeEncoder(f.typ)
-		f.Dencoder = typeDencoder(f.typ)
+		f.encoderFunc = typeEncoder(f.typ)
+		f.dencoderFunc = typeDencoder(f.typ)
+
+		_, ok := exactName[f.Name]
+		if ok {
+			embedMap[f.Name] = append(embedMap[f.Name], f)
+			continue
+		}
+		exactName[f.Name] = f
 	}
 
-	return &StructFields{List: fields, ExactName: exactName}
+	return &StructFields{List: fields, ExactName: exactName, embedMap: embedMap}
 }
-
-// func setReflectVal(field *field) {
-
-// 	// ReflectValueOf returns field's reflect value
-// 	fieldIndex := field.index
-// 	switch {
-// 	case len(field.StructField.Index) == 1 && fieldIndex > 0:
-// 		field.ReflectValueOf = func(value reflect.Value) reflect.Value {
-// 			return reflect.Indirect(value).Field(fieldIndex)
-// 		}
-// 	default:
-// 		field.ReflectValueOf = func(v reflect.Value) reflect.Value {
-// 			v = reflect.Indirect(v)
-// 			for idx, fieldIdx := range field.StructField.Index {
-// 				if fieldIdx >= 0 {
-// 					v = v.Field(fieldIdx)
-// 				} else {
-// 					v = v.Field(-fieldIdx - 1)
-
-// 					if v.IsNil() {
-// 						v.Set(reflect.New(v.Type().Elem()))
-// 					}
-
-// 					if idx < len(field.StructField.Index)-1 {
-// 						v = v.Elem()
-// 					}
-// 				}
-// 			}
-// 			return v
-// 		}
-// 	}
-
-// }
 
 func GetRealReflectVal(f *field, v reflect.Value) (subv reflect.Value) {
 	subv = v
