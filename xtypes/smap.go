@@ -80,3 +80,11 @@ func (m SMap) Value() (driver.Value, error) {
 	bytes, err := m.MarshalBinary()
 	return bytesconv.BytesToString(bytes), err
 }
+
+func (m SMap) Len() int {
+	return len(m)
+}
+
+func (m SMap) IsEmpty() bool {
+	return len(m) <= 0
+}
