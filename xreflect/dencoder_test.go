@@ -1,6 +1,8 @@
 package xreflect
 
 import (
+	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -229,6 +231,210 @@ func Test_mapScanDecoder(t *testing.T) {
 			}
 		})
 	}
+}
+
+type MapItem map[string]string
+
+func (i *MapItem) Scan(val any) error {
+	if i == nil {
+		*i = make(MapItem)
+	}
+
+	json.Unmarshal([]byte(fmt.Sprint(val)), &i)
+
+	return nil
+}
+
+func Test_mapScanDecoder2(t *testing.T) {
+
+	val := struct {
+		V MapItem
+		W *MapItem
+	}{}
+
+	refVal := reflect.ValueOf(&val)
+	refVal = refVal.Elem()
+
+	tests := []struct {
+		name    string
+		v       reflect.Value
+		val     any
+		wantErr bool
+	}{
+		{name: "1.", v: refVal.FieldByName("V"), val: `{"V":"1"}`},
+		{name: "2.", v: refVal.FieldByName("W"), val: `{"W":"2"}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := mapDecoder(tt.v, tt.val); (err != nil) != tt.wantErr {
+				t.Errorf("mapScanDecoder() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+type MapArray []MapItem
+
+func (i *MapArray) Scan(val any) error {
+	if i == nil {
+		*i = make(MapArray, 0)
+	}
+
+	json.Unmarshal([]byte(fmt.Sprint(val)), i)
+	return nil
+}
+
+func Test_SliceDecoder3(t *testing.T) {
+
+	val := struct {
+		V MapArray
+		W *MapArray
+	}{}
+
+	refVal := reflect.ValueOf(&val)
+	refVal = refVal.Elem()
+
+	tests := []struct {
+		name    string
+		v       reflect.Value
+		val     any
+		wantErr bool
+	}{
+		{name: "1.", v: refVal.FieldByName("V"), val: `[{"V":"1"}]`},
+		{name: "2.", v: refVal.FieldByName("W"), val: `[{"W":"2"}]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decoder := newSliceDecoder(tt.v.Type())
+			if err := decoder(tt.v, tt.val); (err != nil) != tt.wantErr {
+				t.Errorf("mapScanDecoder() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+}
+
+type XMapItem map[string]any
+
+func (i *XMapItem) MapScan(val any) error {
+	if i == nil {
+		*i = make(XMapItem)
+	}
+
+	json.Unmarshal([]byte(fmt.Sprint(val)), i)
+	return nil
+}
+
+type XMapArray []XMapItem
+
+func (i *XMapArray) MapScan(val any) error {
+	if i == nil {
+		*i = make(XMapArray, 0)
+	}
+
+	json.Unmarshal([]byte(fmt.Sprint(val)), i)
+	return nil
+}
+
+func Test_SliceDecoder4(t *testing.T) {
+
+	val := struct {
+		V XMapArray
+		W *XMapArray
+	}{}
+
+	refVal := reflect.ValueOf(&val)
+	refVal = refVal.Elem()
+
+	tests := []struct {
+		name    string
+		v       reflect.Value
+		val     any
+		wantErr bool
+	}{
+		{name: "1.", v: refVal.FieldByName("V"), val: `[{"V":"1"}]`},
+		{name: "2.", v: refVal.FieldByName("W"), val: `[{"W":"2"}]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decoder := newSliceDecoder(tt.v.Type())
+			if err := decoder(tt.v, tt.val); (err != nil) != tt.wantErr {
+				t.Errorf("mapScanDecoder() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+}
+
+type IntArray []int
+
+func (i *IntArray) Scan(val any) error {
+	if i == nil {
+		*i = make(IntArray, 0)
+	}
+
+	json.Unmarshal([]byte(fmt.Sprint(val)), i)
+	return nil
+}
+
+func Test_SliceDecoder5(t *testing.T) {
+
+	val := struct {
+		V IntArray
+		W *IntArray
+	}{}
+
+	refVal := reflect.ValueOf(&val)
+	refVal = refVal.Elem()
+
+	tests := []struct {
+		name    string
+		v       reflect.Value
+		val     any
+		wantErr bool
+	}{
+		{name: "1.", v: refVal.FieldByName("V"), val: `[1,2,3]`},
+		{name: "2.", v: refVal.FieldByName("W"), val: `[4,5,6]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decoder := newSliceDecoder(tt.v.Type())
+			if err := decoder(tt.v, tt.val); (err != nil) != tt.wantErr {
+				t.Errorf("mapScanDecoder() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+}
+
+func Test_SliceDecoder6(t *testing.T) {
+
+	val := struct {
+		V []int
+		W *[]int
+	}{}
+
+	refVal := reflect.ValueOf(&val)
+	refVal = refVal.Elem()
+
+	tests := []struct {
+		name    string
+		v       reflect.Value
+		val     any
+		wantErr bool
+	}{
+		{name: "1.", v: refVal.FieldByName("V"), val: []int{1, 2, 3}},
+		{name: "2.", v: refVal.FieldByName("W"), val: []int{4, 5, 6}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decoder := newSliceDecoder(tt.v.Type())
+			if err := decoder(tt.v, tt.val); (err != nil) != tt.wantErr {
+				t.Errorf("mapScanDecoder() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
 }
 
 func Test_structDecoder(t *testing.T) {
