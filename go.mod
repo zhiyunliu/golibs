@@ -2,6 +2,8 @@ module github.com/zhiyunliu/golibs
 
 go 1.18
 
+require github.com/zhiyunliu/stack v1.9.0
+
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/go-playground/assert/v2 v2.2.0
