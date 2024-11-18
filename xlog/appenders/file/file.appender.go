@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	cmap "github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/zhiyunliu/golibs/xlog"
 )
 
@@ -18,7 +18,7 @@ const (
 
 // FileAppender 文件FileAppender
 type FileAppender struct {
-	writers       cmap.ConcurrentMap
+	writers       cmap.ConcurrentMap[string, any]
 	cleanTicker   *time.Ticker
 	cleanInterval time.Duration
 	closeChan     chan struct{}
@@ -40,7 +40,7 @@ func (b *fileApderBuilder) Name() string {
 func (b *fileApderBuilder) Build(layout *xlog.Layout) xlog.Appender {
 	a := &FileAppender{
 		closeChan:     make(chan struct{}),
-		writers:       cmap.New(),
+		writers:       cmap.New[any](),
 		cleanInterval: _clearInterval,
 	}
 	a.layout = layout

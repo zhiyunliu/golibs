@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	cmap "github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
@@ -58,28 +58,28 @@ type Match struct {
 }
 type matchCacheWrap struct {
 	enbale   bool
-	cacheMap cmap.ConcurrentMap
+	cacheMap cmap.ConcurrentMap[string, string]
 }
 
-func (w *matchCacheWrap) Get(key string) (val interface{}, ok bool) {
+func (w *matchCacheWrap) Get(key string) (val string, ok bool) {
 	if !w.enbale {
 		return
 	}
 	val, ok = w.cacheMap.Get(key)
 	return
 }
-func (w *matchCacheWrap) SetIfAbsent(key string, val interface{}) {
+func (w *matchCacheWrap) SetIfAbsent(key string, val string) bool {
 	if !w.enbale {
-		return
+		return false
 	}
-	w.cacheMap.SetIfAbsent(key, val)
+	return w.cacheMap.SetIfAbsent(key, val)
 }
 
 // NewMatch 构建模糊匹配缓存查找管理器
 func NewMatch(pathList []string, opts ...Option) *Match {
 	m := &Match{
 		cache: &matchCacheWrap{
-			cacheMap: cmap.New(),
+			cacheMap: cmap.New[string](),
 		},
 		all: pathList,
 	}
@@ -108,7 +108,7 @@ func (m *Match) Match(path string, spls ...string) (match bool, pattern string) 
 	if m.CanUseCache() {
 		cacheKey = m.buildCacheKey(path, sep)
 		if val, ok := m.cache.Get(cacheKey); ok {
-			return true, val.(string)
+			return true, val
 		}
 	}
 
