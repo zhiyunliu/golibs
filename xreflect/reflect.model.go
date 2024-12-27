@@ -25,15 +25,16 @@ func (f *StructFields) Dencode(rv reflect.Value, name string, val any) (err erro
 		return nil
 	}
 	for i := range list {
-		list[i].Dencoder(rv, val)
+		_ = list[i].Dencoder(rv, val)
 	}
 	return nil
 }
 
 type field struct {
 	Name         string
-	fieldName    string
 	Index        []int
+	TagOpts      TagOptions
+	fieldName    string
 	typ          reflect.Type
 	orgtyp       reflect.Type
 	omitEmpty    bool

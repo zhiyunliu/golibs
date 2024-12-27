@@ -77,12 +77,10 @@ func typeFields(t reflect.Type) *StructFields {
 					// Ignore unexported non-embedded fields.
 					continue
 				}
-				tag := sf.Tag.Get("db")
+
+				tag := getFieldTag(sf.Tag)
 				if tag == "" {
-					tag = sf.Tag.Get("json")
-					if tag == "-" {
-						continue
-					}
+					continue
 				}
 
 				name, opts := parseTag(tag)
@@ -107,6 +105,7 @@ func typeFields(t reflect.Type) *StructFields {
 					}
 					field := field{
 						Name:      name,
+						TagOpts:   opts,
 						fieldName: sf.Name,
 						Index:     index,
 						typ:       ft,
@@ -164,6 +163,22 @@ func typeFields(t reflect.Type) *StructFields {
 	}
 
 	return &StructFields{List: fields, ExactName: exactName, embedMap: embedMap}
+}
+
+func getFieldTag(stag reflect.StructTag) (tag string) {
+	tag = stag.Get("xdb")
+	if tag != "" {
+		return tag
+	}
+	tag = stag.Get("db")
+	if tag != "" {
+		return tag
+	}
+	tag = stag.Get("json")
+	if tag == "-" {
+		return ""
+	}
+	return
 }
 
 func GetRealReflectVal(f *field, v reflect.Value) (subv reflect.Value) {

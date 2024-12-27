@@ -11,19 +11,20 @@ import (
 
 // tagOptions is the string following a comma in a struct field's "json"
 // tag, or the empty string. It does not include the leading comma.
-type tagOptions string
+type TagOptions string
 
 // parseTag splits a struct field's json tag into its name and
 // comma-separated options.
-func parseTag(tag string) (string, tagOptions) {
+func parseTag(tag string) (string, TagOptions) {
 	tag, opt, _ := strings.Cut(tag, ",")
-	return tag, tagOptions(opt)
+	return tag, TagOptions(opt)
 }
 
 // Contains reports whether a comma-separated list of options
 // contains a particular substr flag. substr must be surrounded by a
 // string boundary or commas.
-func (o tagOptions) Contains(optionName string) bool {
+func (o TagOptions) Contains(optionName string) bool {
+	//dbtype:vtp=utp_sup_stock_item
 	if len(o) == 0 {
 		return false
 	}
@@ -34,8 +35,47 @@ func (o tagOptions) Contains(optionName string) bool {
 		if name == optionName {
 			return true
 		}
+		if !strings.Contains(name, ":") {
+			continue
+		}
+
+		name, _, _ = strings.Cut(name, ":")
+		if name == optionName {
+			return true
+		}
 	}
 	return false
+}
+
+func (o TagOptions) GetArgsInfo(opt string) (args []string, ok bool) {
+	//dbtype:vtp=utp_sup_stock_item  ==>
+	//dbtype:varchar
+	if len(o) == 0 {
+		return args, false
+	}
+	s := string(o)
+	for s != "" {
+		var name string
+		name, s, _ = strings.Cut(s, ",")
+		if name == opt {
+			return args, true
+		}
+		if !strings.Contains(name, ":") {
+			continue
+		}
+
+		name, tmparg, _ := strings.Cut(name, ":")
+		if name == opt {
+			args = strings.FieldsFunc(tmparg, func(r rune) bool {
+				if r == '=' || r == '&' {
+					return true
+				}
+				return false
+			})
+			return args, true
+		}
+	}
+	return args, false
 }
 
 func isValidTag(s string) bool {
