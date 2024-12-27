@@ -79,7 +79,7 @@ func typeFields(t reflect.Type) *StructFields {
 				}
 
 				tag := getFieldTag(sf.Tag)
-				if tag == "" {
+				if tag == "-" {
 					continue
 				}
 
@@ -175,9 +175,6 @@ func getFieldTag(stag reflect.StructTag) (tag string) {
 		return tag
 	}
 	tag = stag.Get("json")
-	if tag == "-" {
-		return ""
-	}
 	return
 }
 
