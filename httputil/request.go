@@ -2,7 +2,6 @@ package httputil
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 	"strings"
 )
@@ -11,6 +10,10 @@ type Body interface {
 	GetStatus() int32
 	GetHeader() map[string]string
 	GetResult() []byte
+}
+
+type Client interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 type normalBody struct {
@@ -29,14 +32,14 @@ func (b *normalBody) GetResult() []byte {
 	return b.Body
 }
 
+// Request sends a request to the given URL with the given method and data.
 func Request(method string, url string, data []byte, opts ...Option) (body Body, err error) {
-	opt := &options{
-		client: http.DefaultClient,
-	}
+	opt := defaultOptions()
 
 	for i := range opts {
 		opts[i](opt)
 	}
+	client := opt.client
 	method = strings.ToUpper(method)
 	req, err := http.NewRequest(method, url, bytes.NewReader(data))
 	if err != nil {
@@ -44,29 +47,20 @@ func Request(method string, url string, data []byte, opts ...Option) (body Body,
 	}
 	req.Header = opt.header
 	if opt.tls != nil {
-		req.TLS = opt.tls
+		transport := &http.Transport{
+			TLSClientConfig: opt.tls,
+		}
+		client = &http.Client{
+			Transport: transport,
+		}
 	}
 
-	resp, err := opt.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-	respBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	header := make(map[string]string)
-	for k, v := range resp.Header {
-		header[k] = strings.Join(v, ",")
-	}
-
-	body = &normalBody{
-		Status: int32(resp.StatusCode),
-		Body:   respBytes,
-		Header: header,
-	}
+	body, err = opt.respHandler(resp)
 
 	return body, err
 }
