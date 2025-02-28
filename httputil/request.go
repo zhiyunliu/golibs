@@ -2,8 +2,11 @@ package httputil
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"strings"
+
+	"github.com/zhiyunliu/golibs/xsse"
 )
 
 type Body interface {
@@ -30,6 +33,14 @@ func (b *normalBody) GetHeader() map[string]string {
 }
 func (b *normalBody) GetResult() []byte {
 	return b.Body
+}
+
+func NewEmptyBody() Body {
+	return &normalBody{
+		Status: http.StatusOK,
+		Header: make(map[string]string),
+		Body:   make([]byte, 0),
+	}
 }
 
 // Request sends a request to the given URL with the given method and data.
@@ -60,7 +71,24 @@ func Request(method string, url string, data []byte, opts ...Option) (body Body,
 		return
 	}
 	defer resp.Body.Close()
-	body, err = opt.respHandler(resp)
 
-	return body, err
+	if opt.sseHandler != nil {
+		return handleSSE(opt, resp.Body)
+	}
+	return opt.respHandler(resp)
+}
+
+func handleSSE(opt *options, respBody io.Reader) (body Body, err error) {
+	body = NewEmptyBody()
+	handler := opt.sseHandler
+	events, err := xsse.Decode(respBody, opt.sseOpts...)
+	if err != nil {
+		return
+	}
+	for event := range events {
+		if err = handler(event); err != nil {
+			return
+		}
+	}
+	return
 }

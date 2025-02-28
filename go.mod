@@ -12,6 +12,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.3.0
+	golang.org/x/sync v0.11.0
 	golang.org/x/text v0.3.7
 )
 

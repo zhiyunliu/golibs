@@ -5,23 +5,29 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/zhiyunliu/golibs/xsse"
 )
 
 // RespHandler is a function that takes a io.Reader and returns a io.Reader
 type RespHandler func(resp *http.Response) (Body, error)
+
+type SSEHandler func(event xsse.Event) error
+type SSEOption = xsse.DecoderOption
 
 type options struct {
 	header      http.Header
 	client      Client
 	tls         *tls.Config
 	respHandler RespHandler
+	sseHandler  SSEHandler
+	sseOpts     []SSEOption
 }
 
 func defaultOptions() *options {
 	return &options{
 		client: http.DefaultClient,
 		respHandler: func(resp *http.Response) (Body, error) {
-
 			respBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return nil, err
@@ -37,7 +43,6 @@ func defaultOptions() *options {
 				Body:   respBytes,
 				Header: header,
 			}
-
 			return body, nil
 		},
 	}
@@ -107,3 +112,12 @@ func WithRespHandler(handler RespHandler) Option {
 		o.respHandler = handler
 	}
 }
+
+func WithSSEHandler(handler SSEHandler, opts ...SSEOption) Option {
+	return func(o *options) {
+		o.sseHandler = handler
+		o.sseOpts = opts
+	}
+}
+
+var WithSSEUnmarshal = xsse.WithDecoderUnmarshal
