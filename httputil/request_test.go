@@ -180,7 +180,7 @@ func TestSSERequest_normal(t *testing.T) {
 		return
 	}
 
-	sseHandler := func(event xsse.Event) error {
+	sseHandler := func(event *xsse.Event) error {
 		t.Log("event:", event)
 		return nil
 	}

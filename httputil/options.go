@@ -12,7 +12,7 @@ import (
 // RespHandler is a function that takes a io.Reader and returns a io.Reader
 type RespHandler func(resp *http.Response) (Body, error)
 
-type SSEHandler func(event xsse.Event) error
+type SSEHandler func(event *xsse.Event) error
 type SSEOption = xsse.DecoderOption
 
 type options struct {

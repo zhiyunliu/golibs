@@ -13,7 +13,7 @@ type decoder struct {
 	unmarshalCallback UnmarshalCallback
 }
 
-func Decode(r io.Reader, opts ...DecoderOption) (<-chan Event, error) {
+func Decode(r io.Reader, opts ...DecoderOption) (<-chan *Event, error) {
 	var dec decoder = decoder{
 		unmarshalCallback: DefaultUnmarshalCallback,
 	}
@@ -23,7 +23,7 @@ func Decode(r io.Reader, opts ...DecoderOption) (<-chan Event, error) {
 	return dec.decode(r)
 }
 
-func (d *decoder) dispatchEvent(events chan Event, event Event, data []byte) {
+func (d *decoder) dispatchEvent(events chan *Event, event *Event, data []byte) {
 	dataLength := len(data)
 	if dataLength > 0 {
 		//If the data buffer's last character is a U+000A LINE FEED (LF) character, then remove the last character from the data buffer.
@@ -42,16 +42,16 @@ func (d *decoder) dispatchEvent(events chan Event, event Event, data []byte) {
 	events <- event
 }
 
-func (d *decoder) decode(r io.Reader) (events chan Event, err error) {
+func (d *decoder) decode(r io.Reader) (events chan *Event, err error) {
 	group := errgroup.Group{}
-	events = make(chan Event)
+	events = make(chan *Event)
 	group.Go(func() error {
 		defer func() {
 			close(events)
 		}()
 
 		var dataBuffer *bytes.Buffer = new(bytes.Buffer)
-		var currentEvent Event
+		var currentEvent *Event = &Event{}
 		reader := bufio.NewReader(r) // 使用 bufio.NewReader 来读取数据
 		for {
 			// 读取每个事件
@@ -68,7 +68,7 @@ func (d *decoder) decode(r io.Reader) (events chan Event, err error) {
 				// If the line is empty (a blank line). Dispatch the event.
 				d.dispatchEvent(events, currentEvent, dataBuffer.Bytes())
 				// reset current event and data buffer
-				currentEvent = Event{}
+				currentEvent = &Event{}
 				dataBuffer.Reset()
 				continue
 			}
