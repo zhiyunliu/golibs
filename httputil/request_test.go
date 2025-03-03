@@ -141,7 +141,7 @@ func TestSSERequest_normal(t *testing.T) {
 				break
 			}
 
-			event := xsse.Event{
+			event := &xsse.Event{
 				Id:    fmt.Sprint(idx),
 				Event: "message",
 				Data: map[string]any{
