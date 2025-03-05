@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-
-	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
 type Event struct {
@@ -23,7 +21,7 @@ var (
 	DefaultMarshalCallback MarshalCallback = json.Marshal
 	// default unmarshal callback
 	DefaultUnmarshalCallback UnmarshalCallback = func(bytes []byte) (data any, err error) {
-		return bytesconv.BytesToString(bytes), nil
+		return string(bytes), nil
 	}
 )
 
