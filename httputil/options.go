@@ -16,12 +16,13 @@ type SSEHandler func(event *xsse.Event) error
 type SSEOption = xsse.DecoderOption
 
 type options struct {
-	header      http.Header
-	client      Client
-	tls         *tls.Config
-	respHandler RespHandler
-	sseHandler  SSEHandler
-	sseOpts     []SSEOption
+	header         http.Header
+	client         Client
+	tls            *tls.Config
+	respHandler    RespHandler
+	sseHandler     SSEHandler
+	sseOpts        []SSEOption
+	ReqChangeCalls ReqChangeCalls
 }
 
 func defaultOptions() *options {
@@ -51,6 +52,18 @@ func defaultOptions() *options {
 // Option is a function that takes a *options and modifies it
 type Option func(o *options)
 
+type ReqChangeCall func(req *http.Request)
+type ReqChangeCalls []ReqChangeCall
+
+func (calls ReqChangeCalls) Apply(req *http.Request) {
+	if len(calls) == 0 {
+		return
+	}
+	for i := range calls {
+		calls[i](req)
+	}
+}
+
 // WithHeader sets the header of the request
 func WithHeader(name string, val ...string) Option {
 	return func(o *options) {
@@ -61,6 +74,12 @@ func WithHeader(name string, val ...string) Option {
 			return
 		}
 		o.header[name] = val
+	}
+}
+
+func WithReqChangeCall(calls ...ReqChangeCall) Option {
+	return func(o *options) {
+		o.ReqChangeCalls = append(o.ReqChangeCalls, calls...)
 	}
 }
 

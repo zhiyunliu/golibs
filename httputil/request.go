@@ -65,6 +65,7 @@ func Request(method string, url string, data []byte, opts ...Option) (body Body,
 			Transport: transport,
 		}
 	}
+	opt.ReqChangeCalls.Apply(req)
 
 	resp, err := client.Do(req)
 	if err != nil {
