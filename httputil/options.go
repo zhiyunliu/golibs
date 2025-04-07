@@ -40,9 +40,9 @@ func defaultOptions() *options {
 			}
 
 			body := &normalBody{
-				Status: int32(resp.StatusCode),
-				Body:   respBytes,
-				Header: header,
+				Status:    int32(resp.StatusCode),
+				BodyBytes: respBytes,
+				Headers:   header,
 			}
 			return body, nil
 		},

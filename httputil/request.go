@@ -2,12 +2,24 @@ package httputil
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/zhiyunliu/golibs/xsse"
 )
+
+var (
+	_ Body           = (*normalBody)(nil)
+	_ ResponseEntity = (*normalBody)(nil)
+)
+
+type ResponseEntity interface {
+	StatusCode() int
+	Header() map[string]string
+	Body() (bytes []byte, err error)
+}
 
 type Body interface {
 	GetStatus() int32
@@ -20,31 +32,41 @@ type Client interface {
 }
 
 type normalBody struct {
-	Status int32
-	Header map[string]string
-	Body   []byte
+	Status    int32
+	Headers   map[string]string
+	BodyBytes []byte
 }
 
 func (b *normalBody) GetStatus() int32 {
 	return b.Status
 }
 func (b *normalBody) GetHeader() map[string]string {
-	return b.Header
+	return b.Headers
 }
 func (b *normalBody) GetResult() []byte {
-	return b.Body
+	return b.BodyBytes
+}
+
+func (b *normalBody) StatusCode() int {
+	return int(b.Status)
+}
+func (b *normalBody) Header() map[string]string {
+	return b.Headers
+}
+func (b *normalBody) Body() (bytes []byte, err error) {
+	return b.BodyBytes, nil
 }
 
 func NewEmptyBody() Body {
 	return &normalBody{
-		Status: http.StatusOK,
-		Header: make(map[string]string),
-		Body:   make([]byte, 0),
+		Status:    http.StatusOK,
+		Headers:   make(map[string]string),
+		BodyBytes: make([]byte, 0),
 	}
 }
 
-// Request sends a request to the given URL with the given method and data.
-func Request(method string, url string, data []byte, opts ...Option) (body Body, err error) {
+// RequestWithContext sends a request to the given URL with the given method and data.
+func RequestWithContext(ctx context.Context, method string, url string, data []byte, opts ...Option) (body Body, err error) {
 	opt := defaultOptions()
 
 	for i := range opts {
@@ -52,7 +74,7 @@ func Request(method string, url string, data []byte, opts ...Option) (body Body,
 	}
 	client := opt.client
 	method = strings.ToUpper(method)
-	req, err := http.NewRequest(method, url, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(data))
 	if err != nil {
 		return
 	}
@@ -77,6 +99,11 @@ func Request(method string, url string, data []byte, opts ...Option) (body Body,
 		return handleSSE(opt, resp.Body)
 	}
 	return opt.respHandler(resp)
+}
+
+// Request sends a request to the given URL with the given method and data.
+func Request(method string, url string, data []byte, opts ...Option) (body Body, err error) {
+	return RequestWithContext(context.Background(), method, url, data, opts...)
 }
 
 func handleSSE(opt *options, respBody io.Reader) (body Body, err error) {

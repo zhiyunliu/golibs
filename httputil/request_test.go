@@ -20,7 +20,7 @@ func MockResponseHandler(resp *http.Response) (Body, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &normalBody{Body: body}, nil
+	return &normalBody{BodyBytes: body}, nil
 }
 
 // MockClient 模拟 HTTP 客户端
