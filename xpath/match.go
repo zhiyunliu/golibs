@@ -16,6 +16,12 @@ type Pattern interface {
 
 type Patterns []Pattern
 
+type StrPattern string
+
+func (p StrPattern) Pattern() string {
+	return string(p)
+}
+
 var specials = `~!@#$%^&*()_+-=<>?:"{}|,./;'[]\`
 
 var tsmp = map[string]string{
@@ -84,8 +90,16 @@ func (w *matchCacheWrap) SetIfAbsent(key string, val Pattern) bool {
 	return w.cacheMap.SetIfAbsent(key, val)
 }
 
+func NewMatch(pathList []string, opts ...Option) *Match {
+	patterns := make([]Pattern, len(pathList))
+	for i := range pathList {
+		patterns[i] = StrPattern(pathList[i])
+	}
+	return NewMatchPatterns(patterns, opts...)
+}
+
 // NewMatch 构建模糊匹配缓存查找管理器
-func NewMatch(pathList []Pattern, opts ...Option) *Match {
+func NewMatchPatterns(pathList []Pattern, opts ...Option) *Match {
 	m := &Match{
 		cache: &matchCacheWrap{
 			cacheMap: cmap.New[Pattern](),
@@ -106,8 +120,18 @@ func (m *Match) CanUseCache() bool {
 	return m.cache.enbale
 }
 
+func (m *Match) Match(path string, spls ...string) (match bool, pattern string) {
+	match, tmpPattern := m.MatchPattern(path, spls...)
+	if tmpPattern != nil {
+		pattern = tmpPattern.Pattern()
+	}
+	return match, pattern
+}
+
+// M
+
 // Match Match
-func (m *Match) Match(path string, spls ...string) (match bool, pattern Pattern) {
+func (m *Match) MatchPattern(path string, spls ...string) (match bool, pattern Pattern) {
 	sep := "/"
 	if len(spls) > 0 {
 		sep = spls[0]

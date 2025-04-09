@@ -7,7 +7,7 @@ import (
 func TestPathMatch_dot_Match(t *testing.T) {
 
 	type args struct {
-		reg  StrPattern
+		reg  string
 		path string
 		spl  string
 	}
@@ -102,18 +102,11 @@ func TestPathMatch_dot_Match(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := StrPattern(tt.args.reg)
-			m := NewMatch([]Pattern{p})
+			m := NewMatch([]string{tt.args.reg})
 			match, pattern := m.Match(tt.args.path, tt.args.spl)
 			if tt.want.match != match {
 				t.Errorf("name:%s,expectMatch:%v,actual:%v,pattern:%s,path:%s", tt.name, tt.want.match, match, pattern, tt.args.path)
 			}
 		})
 	}
-}
-
-type StrPattern string
-
-func (p StrPattern) Pattern() string {
-	return string(p)
 }
