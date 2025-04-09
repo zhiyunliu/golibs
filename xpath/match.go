@@ -10,6 +10,12 @@ import (
 	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
+type Pattern interface {
+	Pattern() string
+}
+
+type Patterns []Pattern
+
 var specials = `~!@#$%^&*()_+-=<>?:"{}|,./;'[]\`
 
 var tsmp = map[string]string{
@@ -20,7 +26,7 @@ var partsMp = map[string]string{
 	"*": `[{1}\w]+`,
 }
 
-type sortString []string
+type sortString []Pattern
 
 func (s sortString) Len() int { return len(s) }
 
@@ -32,43 +38,46 @@ func (s sortString) Swap(i, j int) {
 }
 
 func (s sortString) Less(i, j int) bool {
-	il := len(s[i])
-	jl := len(s[j])
+	iv := s[i].Pattern()
+	jv := s[j].Pattern()
+	il := len(iv)
+	jl := len(jv)
+
 	for x := 0; x < jl && x < il; x++ {
-		if s[i][x] == s[j][x] {
+		if iv[x] == jv[x] {
 			continue
 		}
-		if s[i][x] == []byte("*")[0] {
+		if iv[x] == byte('*') {
 			return false
 		}
-		if s[j][x] == []byte("*")[0] {
+		if jv[x] == byte('*') {
 			return true
 		}
-		return s[i][x] < s[j][x]
+		return iv[x] < jv[x]
 	}
-	return s[i] < s[j]
+	return iv < jv
 }
 
 // Match 构建模糊匹配缓存查找管理器
 type Match struct {
 	mutex     sync.Mutex
 	cache     *matchCacheWrap
-	all       []string
+	all       []Pattern
 	regexpAll []*regexp.Regexp
 }
 type matchCacheWrap struct {
 	enbale   bool
-	cacheMap cmap.ConcurrentMap[string, string]
+	cacheMap cmap.ConcurrentMap[string, Pattern]
 }
 
-func (w *matchCacheWrap) Get(key string) (val string, ok bool) {
+func (w *matchCacheWrap) Get(key string) (val Pattern, ok bool) {
 	if !w.enbale {
 		return
 	}
 	val, ok = w.cacheMap.Get(key)
 	return
 }
-func (w *matchCacheWrap) SetIfAbsent(key string, val string) bool {
+func (w *matchCacheWrap) SetIfAbsent(key string, val Pattern) bool {
 	if !w.enbale {
 		return false
 	}
@@ -76,10 +85,10 @@ func (w *matchCacheWrap) SetIfAbsent(key string, val string) bool {
 }
 
 // NewMatch 构建模糊匹配缓存查找管理器
-func NewMatch(pathList []string, opts ...Option) *Match {
+func NewMatch(pathList []Pattern, opts ...Option) *Match {
 	m := &Match{
 		cache: &matchCacheWrap{
-			cacheMap: cmap.New[string](),
+			cacheMap: cmap.New[Pattern](),
 		},
 		all: pathList,
 	}
@@ -98,7 +107,7 @@ func (m *Match) CanUseCache() bool {
 }
 
 // Match Match
-func (m *Match) Match(path string, spls ...string) (match bool, pattern string) {
+func (m *Match) Match(path string, spls ...string) (match bool, pattern Pattern) {
 	sep := "/"
 	if len(spls) > 0 {
 		sep = spls[0]
@@ -113,13 +122,13 @@ func (m *Match) Match(path string, spls ...string) (match bool, pattern string) 
 	}
 
 	for i, u := range m.all {
-		if strings.EqualFold(u, path) {
+		if strings.EqualFold(u.Pattern(), path) {
 			if m.CanUseCache() {
 				m.cache.SetIfAbsent(cacheKey, u)
 			}
 			return true, u
 		}
-		regp := m.getRegexp(u, i, sep)
+		regp := m.getRegexp(u.Pattern(), i, sep)
 		match = regp.Match(bytesconv.StringToBytes(path))
 		if match {
 			if m.CanUseCache() {
@@ -128,7 +137,7 @@ func (m *Match) Match(path string, spls ...string) (match bool, pattern string) 
 			return match, u
 		}
 	}
-	return false, ""
+	return false, nil
 }
 
 func (m *Match) buildCacheKey(path, sep string) string {
