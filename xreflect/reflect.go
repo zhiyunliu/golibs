@@ -2,6 +2,8 @@ package xreflect
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -9,12 +11,14 @@ import (
 )
 
 var (
-	fieldCache     sync.Map
-	encoderCache   sync.Map
-	dencoderCache  sync.Map
-	stringerType   = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
-	scannerType    = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
-	mapScannerType = reflect.TypeOf((*MapScanner)(nil)).Elem()
+	fieldCache        sync.Map
+	encoderCache      sync.Map
+	dencoderCache     sync.Map
+	stringerType      = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
+	driverValuerType  = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+	jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
+	scannerType       = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+	mapScannerType    = reflect.TypeOf((*MapScanner)(nil)).Elem()
 )
 
 type encoderFunc func(v reflect.Value) any
