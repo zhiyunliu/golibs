@@ -2,8 +2,11 @@ package xtypes
 
 import (
 	"container/list"
+	"database/sql/driver"
 	"encoding/json"
 	"sync"
+
+	"github.com/zhiyunliu/golibs/bytesconv"
 )
 
 type SortCompare[K comparable] func(a, b K) bool
@@ -117,6 +120,12 @@ func (m SortedMap[K, V]) MarshalJSON() ([]byte, error) {
 
 func (m SortedMap[K, V]) MarshalBinary() ([]byte, error) {
 	return m.MarshalJSON()
+}
+
+// Value String
+func (m SortedMap[K, V]) Value() (driver.Value, error) {
+	bytes, err := m.MarshalBinary()
+	return bytesconv.BytesToString(bytes), err
 }
 
 // Each 遍历映射中的所有键值对

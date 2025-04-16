@@ -31,11 +31,6 @@ func (ms XMaps) Get(idx int) XMap {
 	return ms[idx]
 }
 
-// Deprecated: As of Go v0.2.0, this function simply calls [ScanTo].
-func (ms XMaps) Scan(obj interface{}) error {
-	return ms.ScanTo(obj)
-}
-
 func (ms XMaps) ScanTo(obj interface{}) error {
 	rv := reflect.ValueOf(obj)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
