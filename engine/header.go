@@ -28,6 +28,10 @@ func (h Header) Set(key, value string) {
 	h[key] = value
 }
 
+func (h Header) Del(key string) {
+	delete(h, key)
+}
+
 func (h Header) Keys() []string {
 	keys := make([]string, len(h))
 	idx := 0
