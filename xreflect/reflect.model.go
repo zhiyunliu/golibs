@@ -10,6 +10,14 @@ type StructFields struct {
 	embedMap  map[string][]*field
 }
 
+func (f *StructFields) GetFieldType(name string) (reflect.Type, bool) {
+	field, ok := f.ExactName[name]
+	if !ok {
+		return nil, ok
+	}
+	return field.typ, ok
+}
+
 // 反序列化结构体的对应属性
 func (f *StructFields) Dencode(rv reflect.Value, name string, val any) (err error) {
 	field, ok := f.ExactName[name]
