@@ -7,66 +7,89 @@ import (
 type StructFields struct {
 	List      []field
 	ExactName map[string]*field
+	embedMap  map[string][]*field
+}
+
+func (f *StructFields) GetFieldType(name string) (reflect.Type, bool) {
+	field, ok := f.ExactName[name]
+	if !ok {
+		return nil, ok
+	}
+	return field.typ, ok
+}
+
+// 反序列化结构体的对应属性
+func (f *StructFields) Dencode(rv reflect.Value, name string, val any) (err error) {
+	field, ok := f.ExactName[name]
+	if !ok {
+		return nil
+	}
+	err = field.Dencoder(rv, val)
+	if err != nil {
+		return
+	}
+	list, ok := f.embedMap[name]
+	if !ok {
+		return nil
+	}
+	for i := range list {
+		_ = list[i].Dencoder(rv, val)
+	}
+	return nil
 }
 
 type field struct {
-	Name      string
-	fieldName string
-	Index     int
-	typ       reflect.Type
-	orgtyp    reflect.Type
-	//indirectType reflect.Type
-	//tag          reflect.StructTag
-	omitEmpty bool
-	Encoder   encoderFunc
-	Dencoder  dencoderFunc
-	//Schema       *Schema
-	NewValuePool FieldNewValuePool
+	Name         string
+	Index        []int
+	TagOpts      TagOptions
+	fieldName    string
+	typ          reflect.Type
+	orgtyp       reflect.Type
+	omitEmpty    bool
+	encoderFunc  encoderFunc
+	dencoderFunc dencoderFunc
 }
 
-// type Schema struct {
-// 	Name         string
-// 	ModelType    reflect.Type
-// 	Fields       []*field
-// 	FieldsByName map[string]*field
-// }
+func (f *field) Dencoder(rv reflect.Value, val any) (err error) {
+	fv := GetRealReflectVal(f, rv) //fv := rv.Field(field.Index)
+	if !fv.IsValid() {
+		return nil
+	}
+	err = f.dencoderFunc(fv, val)
+	return
+}
 
-// func (schema *Schema) ParseField(fieldStruct reflect.StructField) *field {
+func (f *field) Encoder(rv reflect.Value) (val any, ok bool) {
+	fv := GetRealReflectVal(f, rv) //rv.Field(f.Index)
+	if !fv.IsValid() {
+		return nil, false
+	}
+	return f.encoderFunc(fv), true
+}
 
-// 	field := &field{
-// 		fieldName:    fieldStruct.Name,
-// 		typ:          fieldStruct.Type,
-// 		indirectType: fieldStruct.Type,
-// 		tag:          fieldStruct.Tag,
-// 		Schema:       schema,
-// 	}
+func (f *field) EncoderV2(rv reflect.Value) (val any, fv reflect.Value, ok bool) {
+	fv = GetRealReflectVal(f, rv) //rv.Field(f.Index)
+	if !fv.IsValid() {
+		return nil, reflect.Value{}, false
+	}
+	return f.encoderFunc(fv), fv, true
+}
 
-// 	for field.indirectType.Kind() == reflect.Ptr {
-// 		field.indirectType = field.indirectType.Elem()
-// 	}
-// 	field.setupNewValuePool()
-// 	return field
-// }
+// byIndex sorts field by index sequence.
+type byIndex []field
 
-// func (field *field) setupNewValuePool() {
-// 	if field.NewValuePool == nil {
-// 		field.NewValuePool = poolInitializer(reflect.PtrTo(field.indirectType))
-// 	}
-// }
+func (x byIndex) Len() int { return len(x) }
 
-// var (
-// 	normalPool      sync.Map
-// 	poolInitializer = func(reflectType reflect.Type) FieldNewValuePool {
-// 		v, _ := normalPool.LoadOrStore(reflectType, &sync.Pool{
-// 			New: func() interface{} {
-// 				return reflect.New(reflectType).Interface()
-// 			},
-// 		})
-// 		return v.(FieldNewValuePool)
-// 	}
-// )
+func (x byIndex) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 
-type FieldNewValuePool interface {
-	Get() interface{}
-	Put(interface{})
+func (x byIndex) Less(i, j int) bool {
+	for k, xik := range x[i].Index {
+		if k >= len(x[j].Index) {
+			return false
+		}
+		if xik != x[j].Index[k] {
+			return xik < x[j].Index[k]
+		}
+	}
+	return len(x[i].Index) < len(x[j].Index)
 }

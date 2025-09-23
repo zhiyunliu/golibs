@@ -1,6 +1,8 @@
 package xreflect
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -145,18 +147,30 @@ type structEncoder struct {
 }
 
 func (se structEncoder) encode(v reflect.Value) any {
-	if !v.Type().Implements(stringerType) {
-		return unsupportedTypeEncoder(v)
-	}
+	rft := v.Type()
 
-	for v.Kind() == reflect.Pointer {
-		if v.IsNil() {
+	tmpv := v
+	for tmpv.Kind() == reflect.Pointer {
+		if tmpv.IsNil() {
 			return nil
 		}
-		v = v.Elem()
+		tmpv = tmpv.Elem()
 	}
 
-	return v.Interface().(fmt.Stringer).String()
+	if rft.Implements(stringerType) {
+		return v.Interface().(fmt.Stringer).String()
+	}
+	if rft.Implements(driverValuerType) {
+		tmpVal, _ := v.Interface().(driver.Valuer).Value()
+		return tmpVal
+	}
+
+	if rft.Implements(jsonMarshalerType) {
+		tmpVal, _ := v.Interface().(json.Marshaler).MarshalJSON()
+		return tmpVal
+	}
+
+	return unsupportedTypeEncoder(v)
 }
 
 func newStructEncoder(t reflect.Type) encoderFunc {
@@ -169,15 +183,23 @@ type mapEncoder struct {
 }
 
 func (me mapEncoder) encode(v reflect.Value) any {
-	if !v.Type().Implements(stringerType) {
-		return unsupportedTypeEncoder(v)
+	rft := v.Type()
+
+	if rft.Implements(stringerType) {
+		return v.Interface().(fmt.Stringer).String()
 	}
 
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
+	if rft.Implements(driverValuerType) {
+		tmpVal, _ := v.Interface().(driver.Valuer).Value()
+		return tmpVal
 	}
 
-	return v.Interface().(fmt.Stringer).String()
+	if rft.Implements(jsonMarshalerType) {
+		tmpVal, _ := v.Interface().(json.Marshaler).MarshalJSON()
+		return tmpVal
+	}
+
+	return unsupportedTypeEncoder(v)
 }
 
 func newMapEncoder(t reflect.Type) encoderFunc {

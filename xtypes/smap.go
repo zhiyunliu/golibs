@@ -21,11 +21,6 @@ func (m SMap) Keys() []string {
 	return keys
 }
 
-// Deprecated: As of Go v0.2.0, this function simply calls [ScanTo].
-func (m SMap) Scan(obj interface{}) error {
-	return m.ScanTo(obj)
-}
-
 func (m SMap) ScanTo(obj interface{}) error {
 	bytes, _ := json.Marshal(m)
 	return json.Unmarshal(bytes, obj)
@@ -79,4 +74,12 @@ func (m *SMap) MapScan(obj interface{}) error {
 func (m SMap) Value() (driver.Value, error) {
 	bytes, err := m.MarshalBinary()
 	return bytesconv.BytesToString(bytes), err
+}
+
+func (m SMap) Len() int {
+	return len(m)
+}
+
+func (m SMap) IsEmpty() bool {
+	return len(m) <= 0
 }

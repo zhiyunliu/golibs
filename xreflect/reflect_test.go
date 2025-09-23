@@ -83,7 +83,7 @@ func Test_Map(t *testing.T) {
 		mapval.SetMapIndex(reflect.ValueOf("aaaa"), reflect.ValueOf("bbb"))
 		rv1.Elem().Set(mapval)
 
-		fv := reflectVal.Elem().Field(fields.List[i].Index)
+		fv := GetRealReflectVal(&fields.List[i], reflectVal)
 		fv.Set(rv1)
 
 	}
@@ -111,13 +111,42 @@ func Test_Map2(t *testing.T) {
 		mapval.SetMapIndex(reflect.ValueOf("aaaa"), reflect.ValueOf("bbb"))
 		rv1.Elem().Set(mapval)
 
-		fv := reflectVal.Elem().Field(fields.List[i].Index)
+		fv := GetRealReflectVal(&fields.List[i], reflectVal)
+
 		fv.Set(mapval)
 
 	}
 
 	if !reflect.DeepEqual(result.Map, map[string]any{"aaaa": "bbb"}) {
 		t.Errorf("反射失败:%+v", result.Map)
+	}
+
+}
+
+func Test_Map3(t *testing.T) {
+	type val struct {
+		Map map[string]any `json:"xxmap"`
+	}
+	result := &val{
+		Map: map[string]any{"aaaa": "bbb"},
+	}
+	refval := reflect.ValueOf(result)
+
+	fields := CachedTypeFields(refval.Type())
+
+	mapresult := map[string]any{}
+
+	for _, f := range fields.ExactName {
+		if val, ok := f.Encoder(refval); ok {
+			mapresult[f.Name] = val
+		}
+	}
+	expectMap := map[string]any{
+		"xxmap": `{"aaaa": "bbb"}`,
+	}
+
+	if !reflect.DeepEqual(expectMap, mapresult) {
+		t.Errorf("反射失败:result:%+v, expect:%+v", mapresult, expectMap)
 	}
 
 }

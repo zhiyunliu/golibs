@@ -191,14 +191,15 @@ func stringDecoder(v reflect.Value, val any) error {
 		rv = rv.Elem()
 	}
 	val = rv.Interface()
+	strv := GetString(val)
 
 	if v.Kind() == reflect.Pointer {
 		tmprv := reflect.New(v.Type().Elem())
-		tmprv.Elem().SetString(GetString(val))
+		tmprv.Elem().SetString(strv)
 		v.Set(tmprv)
 		return nil
 	}
-	v.SetString(GetString(val))
+	v.SetString(strv)
 	return nil
 }
 
@@ -214,16 +215,20 @@ func mapScanDecoder(v reflect.Value, val any) error {
 		return nil
 	}
 
-	if scanner, ok := v.Interface().(MapScanner); ok {
-		return scanner.MapScan(val)
+	if v.CanConvert(mapScannerType) {
+		return v.Interface().(MapScanner).MapScan(val)
 	}
-	if v.CanAddr() {
-		if scanner, ok := v.Addr().Interface().(MapScanner); ok {
-			return scanner.MapScan(val)
-		}
+	if v.CanAddr() && v.Addr().CanConvert(mapScannerType) {
+		return v.Addr().Interface().(MapScanner).MapScan(val)
+	}
+
+	if v.CanConvert(scannerType) {
+		return v.Interface().(sql.Scanner).Scan(val)
+	}
+	if v.CanAddr() && v.Addr().CanConvert(scannerType) {
+		return v.Addr().Interface().(sql.Scanner).Scan(val)
 	}
 	return nil
-
 }
 
 func mapDecoder(v reflect.Value, val any) error {
@@ -312,6 +317,21 @@ func (ae arrayDecoder) dencode(v reflect.Value, val any) error {
 	if val == nil {
 		return nil
 	}
+	if v.CanSet() && v.IsNil() {
+		// 获取 v 的元素类型
+		elemType := v.Type()
+		if v.Kind() == reflect.Ptr {
+			elemType = elemType.Elem()
+		}
+		// 根据元素类型创建新的实例
+		newValue := reflect.New(elemType)
+		if v.Kind() == reflect.Ptr {
+			v.Set(newValue)
+		} else {
+			// 将新创建的实例赋值给 v
+			v.Set(newValue.Elem())
+		}
+	}
 
 	//todo:奇怪的逻辑，先检查MapScanner 避免xmaps坑
 	if v.CanConvert(mapScannerType) {
@@ -394,13 +414,12 @@ func structDecoder(v reflect.Value, val any) error {
 		return nil
 	}
 
-	if scanner, ok := v.Interface().(sql.Scanner); ok {
-		return scanner.Scan(val)
+	if v.CanConvert(scannerType) {
+		return v.Interface().(sql.Scanner).Scan(val)
 	}
-	if v.CanAddr() {
-		if scanner, ok := v.Addr().Interface().(sql.Scanner); ok {
-			return scanner.Scan(val)
-		}
+	
+	if v.CanAddr() && v.Addr().CanConvert(scannerType) {
+		return v.Addr().Interface().(sql.Scanner).Scan(val)
 	}
 
 	return nil

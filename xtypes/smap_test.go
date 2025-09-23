@@ -136,7 +136,7 @@ func TestSMap_Scan(t *testing.T) {
 	target := TestStruct{}
 
 	// 调用 Scan 方法
-	err := sm.Scan(&target)
+	err := sm.ScanTo(&target)
 
 	// 检查返回的错误是否为 nil
 	if err != nil {

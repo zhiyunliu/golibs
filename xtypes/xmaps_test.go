@@ -21,7 +21,7 @@ func TestXMaps_Scan_1(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.ms.Scan(&tt.args); (err != nil) != tt.wantErr {
+			if err := tt.ms.ScanTo(&tt.args); (err != nil) != tt.wantErr {
 				t.Errorf("XMaps.Scan() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if len(tt.args) != 1 {
@@ -47,7 +47,7 @@ func TestXMaps_Scan_2(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.ms.Scan(&tt.args); (err != nil) != tt.wantErr {
+			if err := tt.ms.ScanTo(&tt.args); (err != nil) != tt.wantErr {
 				t.Errorf("XMaps.Scan() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if len(tt.args) != 1 {

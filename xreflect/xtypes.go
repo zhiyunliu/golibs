@@ -135,6 +135,17 @@ func GetUint64(tmp interface{}) (uint64, error) {
 	case uint64:
 		return val, nil
 
+	case int:
+		return uint64(val), nil
+	case int8:
+		return uint64(val), nil
+	case int16:
+		return uint64(val), nil
+	case int32:
+		return uint64(val), nil
+	case int64:
+		return uint64(val), nil
+
 	case *uint:
 		return uint64(*val), nil
 	case *uint8:
@@ -145,6 +156,17 @@ func GetUint64(tmp interface{}) (uint64, error) {
 		return uint64(*val), nil
 	case *uint64:
 		return *val, nil
+
+	case *int:
+		return uint64(*val), nil
+	case *int8:
+		return uint64(*val), nil
+	case *int16:
+		return uint64(*val), nil
+	case *int32:
+		return uint64(*val), nil
+	case *int64:
+		return uint64(*val), nil
 
 	case string:
 		return strconv.ParseUint(val, 10, 64)

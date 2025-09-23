@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +19,7 @@ var (
 
 	eventPool *sync.Pool
 	appName   string = filepath.Base(os.Args[0])
-	word, _          = regexp.Compile(`%\w+`)
+	word, _          = regexp.Compile(`%\w+|\[@\w+\]`)
 )
 
 func init() {
@@ -66,7 +67,18 @@ func (e *Event) Format(layout *Layout) *Event {
 func (e *Event) Transform(template string, isJson bool) string {
 	//@变量, 将数据放入params中
 	return word.ReplaceAllStringFunc(template, func(s string) string {
-		key := s[1:]
+		var key string
+		if strings.HasPrefix(s, "%") {
+			key = s[1:]
+		}
+
+		if key == "" && strings.HasPrefix(s, "[") {
+			key = s[1 : len(s)-1]
+		}
+		if key == "" {
+			return ""
+		}
+
 		switch key {
 		case "app":
 			return appName
