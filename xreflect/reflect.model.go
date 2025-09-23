@@ -67,6 +67,14 @@ func (f *field) Encoder(rv reflect.Value) (val any, ok bool) {
 	return f.encoderFunc(fv), true
 }
 
+func (f *field) EncoderV2(rv reflect.Value) (val any, fv reflect.Value, ok bool) {
+	fv = GetRealReflectVal(f, rv) //rv.Field(f.Index)
+	if !fv.IsValid() {
+		return nil, reflect.Value{}, false
+	}
+	return f.encoderFunc(fv), fv, true
+}
+
 // byIndex sorts field by index sequence.
 type byIndex []field
 
