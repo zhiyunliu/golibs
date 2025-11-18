@@ -119,3 +119,8 @@ func (m XMap) Value() (driver.Value, error) {
 	bytes, err := m.MarshalBinary()
 	return bytesconv.BytesToString(bytes), err
 }
+
+func (h XMap) Format(f fmt.State, verb rune) {
+	bytes, _ := json.Marshal(h)
+	_, _ = f.Write(bytes)
+}

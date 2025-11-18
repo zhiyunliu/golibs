@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 
 	"github.com/zhiyunliu/golibs/bytesconv"
 	"github.com/zhiyunliu/golibs/xtransform"
@@ -82,4 +83,9 @@ func (m SMap) Len() int {
 
 func (m SMap) IsEmpty() bool {
 	return len(m) <= 0
+}
+
+func (h SMap) Format(f fmt.State, verb rune) {
+	bytes, _ := json.Marshal(h)
+	_, _ = f.Write(bytes)
 }

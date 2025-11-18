@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/textproto"
 	"strings"
 )
@@ -50,4 +52,8 @@ func (h Header) IsEmpty() bool {
 }
 func (h Header) Values() map[string]string {
 	return h
+}
+func (h Header) Format(f fmt.State, verb rune) {
+	bytes, _ := json.Marshal(h)
+	_, _ = f.Write(bytes)
 }
