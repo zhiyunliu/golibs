@@ -3,6 +3,7 @@ package xreflect
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type StructOption func(*structOptions)
@@ -70,11 +71,16 @@ func structToMapDepth(obj interface{}, depth int, maxDepth int) map[string]inter
 		field := value.Field(i)
 		fieldType := value.Type().Field(i)
 		fieldName := fieldType.Tag.Get("json")
-		if fieldName == "" {
-			fieldName = fieldType.Name
+
+		if idx := strings.Index(fieldName, ","); idx != -1 {
+			fieldName = fieldName[:idx]
 		}
 		if fieldName == "-" {
 			continue
+		}
+
+		if fieldName == "" {
+			fieldName = fieldType.Name
 		}
 
 		switch field.Kind() {

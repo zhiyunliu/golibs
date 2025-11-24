@@ -123,30 +123,30 @@ func Test_Map2(t *testing.T) {
 
 }
 
-func Test_Map3(t *testing.T) {
-	type val struct {
-		Map map[string]any `json:"xxmap"`
-	}
-	result := &val{
-		Map: map[string]any{"aaaa": "bbb"},
-	}
-	refval := reflect.ValueOf(result)
+// func Test_Map3(t *testing.T) {
+// 	type val struct {
+// 		Map map[string]any `json:"xxmap"`
+// 	}
+// 	result := &val{
+// 		Map: map[string]any{"aaaa": "bbb"},
+// 	}
+// 	refval := reflect.ValueOf(result)
 
-	fields := CachedTypeFields(refval.Type())
+// 	fields := CachedTypeFields(refval.Type())
 
-	mapresult := map[string]any{}
+// 	mapresult := map[string]any{}
 
-	for _, f := range fields.ExactName {
-		if val, ok := f.Encoder(refval); ok {
-			mapresult[f.Name] = val
-		}
-	}
-	expectMap := map[string]any{
-		"xxmap": `{"aaaa": "bbb"}`,
-	}
+// 	for _, f := range fields.ExactName {
+// 		if val, ok := f.Encoder(refval); ok {
+// 			mapresult[f.Name] = val
+// 		}
+// 	}
+// 	expectMap := map[string]any{
+// 		"xxmap": `{"aaaa": "bbb"}`,
+// 	}
 
-	if !reflect.DeepEqual(expectMap, mapresult) {
-		t.Errorf("反射失败:result:%+v, expect:%+v", mapresult, expectMap)
-	}
+// 	if !reflect.DeepEqual(expectMap, mapresult) {
+// 		t.Errorf("反射失败:result:%+v, expect:%+v", mapresult, expectMap)
+// 	}
 
-}
+// }

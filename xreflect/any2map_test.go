@@ -21,6 +21,13 @@ type TestStruct3 struct {
 	Name string
 }
 
+type TestStruct4 struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name,omitempty"`
+	Email    string `json:"email,omitempty"`
+	Password string `json:"password"`
+}
+
 func TestAnyToMap(t *testing.T) {
 	obj := TestStruct{
 		ID:   1,
@@ -237,4 +244,24 @@ func TestAnyToMapWithNestedAndAnonymousStruct(t *testing.T) {
 	result, err := AnyToMap(obj)
 	assert.Equal(t, nil, err, "TestAnyToMap not error")
 	assert.Equal(t, expected, result, "Test failed, expected: '%v', got:  '%v'", expected, result)
+}
+
+func TestAnyToMapWithOmitEmpty(t *testing.T) {
+	obj := TestStruct4{
+		ID:       1,
+		Name:     "John",
+		Email:    "", // Empty value
+		Password: "secret",
+	}
+
+	expected := map[string]interface{}{
+		"id":       1,
+		"name":     "John",
+		"email":    "",
+		"password": "secret",
+	}
+	
+	result, err := AnyToMap(obj)
+	assert.Equal(t, nil, err, "TestAnyToMapWithOmitEmpty not error")
+	assert.Equal(t, expected, result, "TestAnyToMapWithOmitEmpty should correctly parse json tags with omitempty")
 }
