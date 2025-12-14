@@ -8,6 +8,10 @@ type Group struct {
 	delimiter string
 }
 
+func (g *Group) Prefix() string {
+	return g.prefix
+}
+
 // NewGroup 创建路径分组
 func (m *Matcher) Group(prefix string, options ...Option) *Group {
 	return &Group{

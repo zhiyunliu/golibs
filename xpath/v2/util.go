@@ -18,3 +18,4 @@ func parseSegment(segment string) (NodeType, string) {
 	// 静态节点
 	return StaticNode, ""
 }
+

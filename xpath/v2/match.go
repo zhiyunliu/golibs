@@ -10,6 +10,11 @@ type Matcher struct {
 
 // NewMatcher 创建新匹配器
 func NewMatcher(options ...MatcherOption) *Matcher {
+	return NewMatcherWithPatterns(nil, options...)
+}
+
+// NewMatcherWithPatterns 创建新匹配器并添加初始路径模式
+func NewMatcherWithPatterns(patterns []string, options ...MatcherOption) *Matcher {
 	m := &Matcher{
 		delimiter: "/", // 默认分隔符为 "/"
 	}
@@ -25,6 +30,11 @@ func NewMatcher(options ...MatcherOption) *Matcher {
 		nodeType: StaticNode,
 		children: make([]*TreeNode, 0),
 		info:     &NodeInfo{},
+	}
+	
+	// 添加初始路径模式
+	for _, pattern := range patterns {
+		m.MustAddPath(pattern)
 	}
 	
 	return m
@@ -90,11 +100,15 @@ func (m *Matcher) joinPath(segments ...string) string {
 		return m.delimiter
 	}
 	
-	// 过滤掉空字符串
-	filtered := make([]string, 0, len(segments))
+	// 过滤掉空字符串并正确处理已经包含分隔符的段
+	var filtered []string
 	for _, seg := range segments {
 		if seg != "" {
-			filtered = append(filtered, seg)
+			// 如果段已经以分隔符开头或结尾，则去除它们
+			trimmedSeg := strings.TrimPrefix(strings.TrimSuffix(seg, m.delimiter), m.delimiter)
+			if trimmedSeg != "" {
+				filtered = append(filtered, trimmedSeg)
+			}
 		}
 	}
 	
@@ -163,10 +177,22 @@ func (n *TreeNode) insert(m *Matcher, segments []string, depth int, info *NodeIn
 // search 搜索匹配的路由
 func (n *TreeNode) search(m *Matcher, segments []string, depth int, params map[string]string) *NodeInfo {
 	// 如果到达末尾，返回当前节点信息（如果是叶子节点）
+	// 同时检查是否有CatchAllNode子节点可以直接匹配
 	if depth >= len(segments) {
 		if n.isLeaf {
 			return n.info
 		}
+		
+		// 检查是否有CatchAllNode子节点
+		n.childLock.RLock()
+		defer n.childLock.RUnlock()
+		
+		for _, child := range n.children {
+			if child.nodeType == CatchAllNode && child.isLeaf {
+				return child.info
+			}
+		}
+		
 		return nil
 	}
 
@@ -209,9 +235,11 @@ func (n *TreeNode) search(m *Matcher, segments []string, depth int, params map[s
 
 	// 4. 尝试多段通配符（**）
 	for _, child := range n.children {
-		if child.nodeType == CatchAllNode && child.isLeaf {
-			// ** 匹配剩余所有段，直接返回节点信息
-			return child.info
+		if child.nodeType == CatchAllNode {
+			// ** 可以匹配剩余的所有段，包括零个段
+			if child.isLeaf {
+				return child.info
+			}
 		}
 	}
 

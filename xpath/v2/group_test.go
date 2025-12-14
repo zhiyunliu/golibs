@@ -9,7 +9,7 @@ func TestGroupBasics(t *testing.T) {
 
 	// 创建分组
 	apiGroup := matcher.Group("/api")
-
+	
 	// 在分组中添加路径
 	apiGroup.MustAddPath("/users", WithName("用户列表"))
 	apiGroup.MustAddPath("/users/{id}", WithName("用户详情"))

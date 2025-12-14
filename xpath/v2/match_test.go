@@ -185,3 +185,37 @@ func TestMetaOption(t *testing.T) {
 		t.Errorf("Expected meta timeout 30, got '%v'", result.Info.Meta["timeout"])
 	}
 }
+
+func TestNewMatcherWithPatterns(t *testing.T) {
+	patterns := []string{
+		"/api/users",
+		"/api/users/{id}",
+		"/api/orders/{id}/items",
+	}
+	
+	matcher := NewMatcherWithPatterns(patterns, WithDelimiter("/"))
+	
+	// 测试匹配
+	result := matcher.Match("/api/users")
+	if !result.Matched {
+		t.Error("Expected match for /api/users, but got no match")
+	}
+	
+	result = matcher.Match("/api/users/123")
+	if !result.Matched {
+		t.Error("Expected match for /api/users/123, but got no match")
+	}
+	
+	if result.Params["id"] != "123" {
+		t.Errorf("Expected param id='123', got '%s'", result.Params["id"])
+	}
+	
+	result = matcher.Match("/api/orders/456/items")
+	if !result.Matched {
+		t.Error("Expected match for /api/orders/456/items, but got no match")
+	}
+	
+	if result.Params["id"] != "456" {
+		t.Errorf("Expected param id='456', got '%s'", result.Params["id"])
+	}
+}
