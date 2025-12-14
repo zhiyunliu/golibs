@@ -18,34 +18,3 @@ func parseSegment(segment string) (NodeType, string) {
 	// 静态节点
 	return StaticNode, ""
 }
-
-// splitPath 分割路径
-func splitPath(path string) []string {
-	path = strings.Trim(path, "/")
-	if path == "" {
-		return []string{}
-	}
-	return strings.Split(path, "/")
-}
-
-// joinPath 连接路径段
-func joinPath(segments ...string) string {
-	result := ""
-	for i, seg := range segments {
-		if seg == "" {
-			continue
-		}
-		if i == 0 || seg[0] == '/' {
-			result += seg
-		} else {
-			result += "/" + seg
-		}
-	}
-	if result == "" {
-		return "/"
-	}
-	if result[0] != '/' {
-		result = "/" + result
-	}
-	return result
-}
