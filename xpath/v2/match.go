@@ -1,26 +1,39 @@
 package v2
 
+import "strings"
+
 // Matcher 路径匹配器
 type Matcher struct {
-	root *TreeNode
+	root      *TreeNode
+	delimiter string
 }
 
 // NewMatcher 创建新匹配器
-func NewMatcher() *Matcher {
-	return &Matcher{
-		root: &TreeNode{
-			segment:  "/",
-			nodeType: StaticNode,
-			children: make([]*TreeNode, 0),
-			info:     &NodeInfo{},
-		},
+func NewMatcher(options ...MatcherOption) *Matcher {
+	m := &Matcher{
+		delimiter: "/", // 默认分隔符为 "/"
 	}
+	
+	// 应用选项
+	for _, opt := range options {
+		opt(m)
+	}
+	
+	// 初始化根节点
+	m.root = &TreeNode{
+		segment:  m.delimiter,
+		nodeType: StaticNode,
+		children: make([]*TreeNode, 0),
+		info:     &NodeInfo{},
+	}
+	
+	return m
 }
 
 // AddPath 添加路径规则
 func (m *Matcher) AddPath(pattern string, options ...Option) error {
-	if pattern == "" || pattern[0] != '/' {
-		return NewMatcherError("pattern must start with '/'", pattern)
+	if pattern == "" || pattern[0] != m.delimiter[0] {
+		return NewMatcherError("pattern must start with delimiter", pattern)
 	}
 
 	// 解析并收集所有选项
@@ -29,8 +42,8 @@ func (m *Matcher) AddPath(pattern string, options ...Option) error {
 		opt(info)
 	}
 
-	segments := splitPath(pattern)
-	m.root.insert(segments, 0, info)
+	segments := m.splitPath(pattern)
+	m.root.insert(m, segments, 0, info)
 	return nil
 }
 
@@ -43,14 +56,14 @@ func (m *Matcher) MustAddPath(pattern string, options ...Option) {
 
 // Match 匹配URL
 func (m *Matcher) Match(path string) *MatchResult {
-	if path == "" || path[0] != '/' {
+	if path == "" || path[0] != m.delimiter[0] {
 		return &MatchResult{Matched: false}
 	}
 
-	segments := splitPath(path)
+	segments := m.splitPath(path)
 	params := make(map[string]string)
 
-	info := m.root.search(segments, 0, params)
+	info := m.root.search(m, segments, 0, params)
 	if info != nil {
 		return &MatchResult{
 			Matched: true,
@@ -62,61 +75,38 @@ func (m *Matcher) Match(path string) *MatchResult {
 	return &MatchResult{Matched: false}
 }
 
-// Walk 遍历所有路径
-func (m *Matcher) Walk(visit func(pattern string, info *NodeInfo)) {
-	m.root.walk("", visit)
+// splitPath 分割路径
+func (m *Matcher) splitPath(path string) []string {
+	trimmed := strings.TrimPrefix(strings.TrimSuffix(path, m.delimiter), m.delimiter)
+	if trimmed == "" {
+		return []string{}
+	}
+	return strings.Split(trimmed, m.delimiter)
 }
 
-// walk 遍历节点
-func (n *TreeNode) walk(currentPath string, visit func(pattern string, info *NodeInfo)) {
-	if n.isLeaf && n.info != nil {
-		visit(currentPath, n.info)
+// joinPath 连接路径段
+func (m *Matcher) joinPath(segments ...string) string {
+	if len(segments) == 0 {
+		return m.delimiter
 	}
-
-	n.childLock.RLock()
-	defer n.childLock.RUnlock()
-
-	for _, child := range n.children {
-		childPath := joinPath(currentPath, child.segment)
-		child.walk(childPath, visit)
-	}
-}
-
-// FindPath 查找指定路径模式
-func (m *Matcher) FindPath(pattern string) (*NodeInfo, bool) {
-	segments := splitPath(pattern)
-	params := make(map[string]string)
-
-	info := m.root.findExact(segments, 0, params)
-	return info, info != nil
-}
-
-// findExact 精确查找（不匹配参数和通配符）
-func (n *TreeNode) findExact(segments []string, depth int, params map[string]string) *NodeInfo {
-	if depth >= len(segments) {
-		if n.isLeaf {
-			return n.info
-		}
-		return nil
-	}
-
-	segment := segments[depth]
-
-	n.childLock.RLock()
-	defer n.childLock.RUnlock()
-
-	for _, child := range n.children {
-		// 只匹配相同的segment
-		if child.segment == segment {
-			return child.findExact(segments, depth+1, params)
+	
+	// 过滤掉空字符串
+	filtered := make([]string, 0, len(segments))
+	for _, seg := range segments {
+		if seg != "" {
+			filtered = append(filtered, seg)
 		}
 	}
-
-	return nil
+	
+	if len(filtered) == 0 {
+		return m.delimiter
+	}
+	
+	return m.delimiter + strings.Join(filtered, m.delimiter)
 }
 
 // insert 插入路由节点
-func (n *TreeNode) insert(segments []string, depth int, info *NodeInfo) {
+func (n *TreeNode) insert(m *Matcher, segments []string, depth int, info *NodeInfo) {
 	if depth >= len(segments) {
 		// 合并节点信息（如果已存在）
 		if n.info != nil {
@@ -152,7 +142,7 @@ func (n *TreeNode) insert(segments []string, depth int, info *NodeInfo) {
 
 	for _, child := range n.children {
 		if child.segment == segment {
-			child.insert(segments, depth+1, info)
+			child.insert(m, segments, depth+1, info)
 			return
 		}
 	}
@@ -167,11 +157,11 @@ func (n *TreeNode) insert(segments []string, depth int, info *NodeInfo) {
 	}
 
 	n.children = append(n.children, newNode)
-	newNode.insert(segments, depth+1, info)
+	newNode.insert(m, segments, depth+1, info)
 }
 
 // search 搜索匹配的路由
-func (n *TreeNode) search(segments []string, depth int, params map[string]string) *NodeInfo {
+func (n *TreeNode) search(m *Matcher, segments []string, depth int, params map[string]string) *NodeInfo {
 	// 如果到达末尾，返回当前节点信息（如果是叶子节点）
 	if depth >= len(segments) {
 		if n.isLeaf {
@@ -190,7 +180,7 @@ func (n *TreeNode) search(segments []string, depth int, params map[string]string
 	// 1. 尝试静态匹配
 	for _, child := range n.children {
 		if child.nodeType == StaticNode && child.segment == segment {
-			if info := child.search(segments, depth+1, params); info != nil {
+			if info := child.search(m, segments, depth+1, params); info != nil {
 				return info
 			}
 		}
@@ -200,7 +190,7 @@ func (n *TreeNode) search(segments []string, depth int, params map[string]string
 	for _, child := range n.children {
 		if child.nodeType == ParamNode {
 			params[child.paramName] = segment
-			if info := child.search(segments, depth+1, params); info != nil {
+			if info := child.search(m, segments, depth+1, params); info != nil {
 				return info
 			}
 			// 回溯：删除参数
@@ -211,7 +201,7 @@ func (n *TreeNode) search(segments []string, depth int, params map[string]string
 	// 3. 尝试单段通配符
 	for _, child := range n.children {
 		if child.nodeType == WildcardNode {
-			if info := child.search(segments, depth+1, params); info != nil {
+			if info := child.search(m, segments, depth+1, params); info != nil {
 				return info
 			}
 		}
@@ -222,6 +212,59 @@ func (n *TreeNode) search(segments []string, depth int, params map[string]string
 		if child.nodeType == CatchAllNode && child.isLeaf {
 			// ** 匹配剩余所有段，直接返回节点信息
 			return child.info
+		}
+	}
+
+	return nil
+}
+
+// Walk 遍历所有路径
+func (m *Matcher) Walk(visit func(pattern string, info *NodeInfo)) {
+	m.root.walk(m, "", visit)
+}
+
+// walk 遍历节点
+func (n *TreeNode) walk(m *Matcher, currentPath string, visit func(pattern string, info *NodeInfo)) {
+	if n.isLeaf && n.info != nil {
+		visit(currentPath, n.info)
+	}
+
+	n.childLock.RLock()
+	defer n.childLock.RUnlock()
+
+	for _, child := range n.children {
+		childPath := m.joinPath(currentPath, child.segment)
+		child.walk(m, childPath, visit)
+	}
+}
+
+// FindPath 查找指定路径模式
+func (m *Matcher) FindPath(pattern string) (*NodeInfo, bool) {
+	segments := m.splitPath(pattern)
+	params := make(map[string]string)
+
+	info := m.root.findExact(m, segments, 0, params)
+	return info, info != nil
+}
+
+// findExact 精确查找（不匹配参数和通配符）
+func (n *TreeNode) findExact(m *Matcher, segments []string, depth int, params map[string]string) *NodeInfo {
+	if depth >= len(segments) {
+		if n.isLeaf {
+			return n.info
+		}
+		return nil
+	}
+
+	segment := segments[depth]
+
+	n.childLock.RLock()
+	defer n.childLock.RUnlock()
+
+	for _, child := range n.children {
+		// 只匹配相同的segment
+		if child.segment == segment {
+			return child.findExact(m, segments, depth+1, params)
 		}
 	}
 

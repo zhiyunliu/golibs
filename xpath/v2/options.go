@@ -1,7 +1,10 @@
 package v2
 
-// Option 路径选项类型
+// Option 路径选项类型（用于NodeInfo）
 type Option func(*NodeInfo)
+
+// MatcherOption 匹配器选项类型（用于Matcher）
+type MatcherOption func(*Matcher)
 
 // NodeInfo 节点信息，存储所有Option信息
 type NodeInfo struct {
@@ -33,5 +36,12 @@ func WithMeta(meta map[string]any) Option {
 		for k, v := range meta {
 			info.Meta[k] = v
 		}
+	}
+}
+
+// WithDelimiter 分隔符选项
+func WithDelimiter(delimiter string) MatcherOption {
+	return func(m *Matcher) {
+		m.delimiter = delimiter
 	}
 }

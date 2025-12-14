@@ -2,23 +2,25 @@ package v2
 
 // Group 路径分组
 type Group struct {
-	matcher *Matcher
-	prefix  string
-	options []Option
+	matcher   *Matcher
+	prefix    string
+	options   []Option
+	delimiter string
 }
 
 // NewGroup 创建路径分组
 func (m *Matcher) NewGroup(prefix string, options ...Option) *Group {
 	return &Group{
-		matcher: m,
-		prefix:  prefix,
-		options: options,
+		matcher:   m,
+		prefix:    prefix,
+		options:   options,
+		delimiter: m.delimiter,
 	}
 }
 
 // AddPath 分组添加路径
 func (g *Group) AddPath(pattern string, options ...Option) error {
-	fullPattern := joinPath(g.prefix, pattern)
+	fullPattern := g.matcher.joinPath(g.prefix, pattern)
 
 	// 合并分组选项和路径选项
 	allOptions := make([]Option, 0, len(g.options)+len(options))
@@ -37,9 +39,9 @@ func (g *Group) MustAddPath(pattern string, options ...Option) {
 
 // AddPathWithValidation 带验证的分组添加路径
 func (g *Group) AddPathWithValidation(pattern string, options ...Option) error {
-	fullPattern := joinPath(g.prefix, pattern)
+	fullPattern := g.matcher.joinPath(g.prefix, pattern)
 
-	if err := ValidatePattern(fullPattern); err != nil {
+	if err := g.matcher.ValidatePattern(fullPattern); err != nil {
 		return err
 	}
 
@@ -53,7 +55,7 @@ func (g *Group) AddPathWithValidation(pattern string, options ...Option) error {
 
 // NewSubGroup 创建子分组
 func (g *Group) NewSubGroup(prefix string, options ...Option) *Group {
-	fullPrefix := joinPath(g.prefix, prefix)
+	fullPrefix := g.matcher.joinPath(g.prefix, prefix)
 
 	// 合并父分组和子分组的选项
 	allOptions := make([]Option, 0, len(g.options)+len(options))
@@ -61,8 +63,9 @@ func (g *Group) NewSubGroup(prefix string, options ...Option) *Group {
 	allOptions = append(allOptions, options...)
 
 	return &Group{
-		matcher: g.matcher,
-		prefix:  fullPrefix,
-		options: allOptions,
+		matcher:   g.matcher,
+		prefix:    fullPrefix,
+		options:   allOptions,
+		delimiter: g.delimiter,
 	}
 }

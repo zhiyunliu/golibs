@@ -3,16 +3,16 @@ package v2
 import "strings"
 
 // ValidatePattern 验证路径模式
-func ValidatePattern(pattern string) error {
+func (m *Matcher) ValidatePattern(pattern string) error {
 	if pattern == "" {
 		return &ValidationError{Pattern: pattern, Reason: "empty pattern"}
 	}
 
-	if pattern[0] != '/' {
-		return &ValidationError{Pattern: pattern, Reason: "must start with '/'"}
+	if pattern[0] != m.delimiter[0] {
+		return &ValidationError{Pattern: pattern, Reason: "must start with delimiter"}
 	}
 
-	segments := splitPath(pattern)
+	segments := m.splitPath(pattern)
 	for i, seg := range segments {
 		if seg == "" {
 			return &ValidationError{Pattern: pattern, Reason: "empty segment"}
@@ -65,7 +65,7 @@ func isValidParamName(name string) bool {
 
 // AddPathWithValidation 带验证的添加路径
 func (m *Matcher) AddPathWithValidation(pattern string, options ...Option) error {
-	if err := ValidatePattern(pattern); err != nil {
+	if err := m.ValidatePattern(pattern); err != nil {
 		return err
 	}
 	return m.AddPath(pattern, options...)

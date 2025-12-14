@@ -11,3 +11,23 @@
 - ✅ 灵活的Option模式配置
 - ✅ 路径分组支持
 - ✅ 完整的验证和错误处理
+- ✅ 支持自定义路径分隔符（默认为"/"）
+
+## 使用示例
+
+### 基本使用
+
+```go
+matcher := NewMatcher()
+matcher.AddPath("/api/users/{id}", WithName("获取用户信息"))
+result := matcher.Match("/api/users/123")
+```
+
+### 自定义分隔符
+
+```go
+// 使用 "." 作为分隔符
+matcher := NewMatcher(WithDelimiter("."))
+matcher.AddPath(".config.database.host", WithName("数据库主机配置"))
+result := matcher.Match(".config.database.host")
+```

@@ -12,7 +12,7 @@ const (
 	CatchAllNode
 )
 
-// TreeNode 路由树节点
+// TreeNode 路径树节点
 type TreeNode struct {
 	segment   string      // 路径段
 	nodeType  NodeType    // 节点类型
