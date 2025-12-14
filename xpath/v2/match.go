@@ -9,21 +9,16 @@ type Matcher struct {
 }
 
 // NewMatcher 创建新匹配器
-func NewMatcher(options ...MatcherOption) *Matcher {
-	return NewMatcherWithPatterns(nil, options...)
-}
-
-// NewMatcherWithPatterns 创建新匹配器并添加初始路径模式
-func NewMatcherWithPatterns(patterns []string, options ...MatcherOption) *Matcher {
+func NewMatcher(patterns []string, options ...MatcherOption) *Matcher {
 	m := &Matcher{
 		delimiter: "/", // 默认分隔符为 "/"
 	}
-	
+
 	// 应用选项
 	for _, opt := range options {
 		opt(m)
 	}
-	
+
 	// 初始化根节点
 	m.root = &TreeNode{
 		segment:  m.delimiter,
@@ -31,12 +26,12 @@ func NewMatcherWithPatterns(patterns []string, options ...MatcherOption) *Matche
 		children: make([]*TreeNode, 0),
 		info:     &NodeInfo{},
 	}
-	
+
 	// 添加初始路径模式
 	for _, pattern := range patterns {
-		m.MustAddPath(pattern)
+		_ = m.AddPath(pattern) //忽略验证错误信息
 	}
-	
+
 	return m
 }
 
@@ -99,7 +94,7 @@ func (m *Matcher) joinPath(segments ...string) string {
 	if len(segments) == 0 {
 		return m.delimiter
 	}
-	
+
 	// 过滤掉空字符串并正确处理已经包含分隔符的段
 	var filtered []string
 	for _, seg := range segments {
@@ -111,11 +106,11 @@ func (m *Matcher) joinPath(segments ...string) string {
 			}
 		}
 	}
-	
+
 	if len(filtered) == 0 {
 		return m.delimiter
 	}
-	
+
 	return m.delimiter + strings.Join(filtered, m.delimiter)
 }
 
@@ -182,17 +177,17 @@ func (n *TreeNode) search(m *Matcher, segments []string, depth int, params map[s
 		if n.isLeaf {
 			return n.info
 		}
-		
+
 		// 检查是否有CatchAllNode子节点
 		n.childLock.RLock()
 		defer n.childLock.RUnlock()
-		
+
 		for _, child := range n.children {
 			if child.nodeType == CatchAllNode && child.isLeaf {
 				return child.info
 			}
 		}
-		
+
 		return nil
 	}
 

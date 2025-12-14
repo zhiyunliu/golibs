@@ -2,7 +2,7 @@ package v2
 
 import "strings"
 
-// ValidatePattern 验证路径模式
+// ValidatePattern 验证路径模式的有效性
 func (m *Matcher) ValidatePattern(pattern string) error {
 	if pattern == "" {
 		return &ValidationError{Pattern: pattern, Reason: "empty pattern"}
@@ -27,7 +27,15 @@ func (m *Matcher) ValidatePattern(pattern string) error {
 		}
 
 		// 检查参数格式
-		if strings.HasPrefix(seg, "{") && strings.HasSuffix(seg, "}") {
+		if strings.HasPrefix(seg, "{") || strings.HasSuffix(seg, "}") {
+			// 必须同时以{开头和}结尾才是合法参数
+			if !(strings.HasPrefix(seg, "{") && strings.HasSuffix(seg, "}")) {
+				return &ValidationError{
+					Pattern: pattern,
+					Reason:  "malformed parameter: " + seg,
+				}
+			}
+			
 			paramName := seg[1 : len(seg)-1]
 			if paramName == "" {
 				return &ValidationError{Pattern: pattern, Reason: "empty parameter name"}

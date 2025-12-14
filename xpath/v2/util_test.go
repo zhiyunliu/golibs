@@ -32,7 +32,7 @@ func TestParseSegment(t *testing.T) {
 }
 
 func TestSplitPath(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	tests := []struct {
 		path     string
@@ -42,20 +42,20 @@ func TestSplitPath(t *testing.T) {
 		{"/api", []string{"api"}},
 		{"/api/users", []string{"api", "users"}},
 		{"/api/users/", []string{"api", "users"}},
-		{"/api/users/123", []string{"api", "users", "123"}},
+		{"api/users", []string{"api", "users"}},
 		{"", []string{}},
 	}
 
 	for _, test := range tests {
 		result := matcher.splitPath(test.path)
 		if !reflect.DeepEqual(result, test.expected) {
-			t.Errorf("For path '%s': expected %v, got %v", test.path, test.expected, result)
+			t.Errorf("splitPath(%q) = %v, expected %v", test.path, result, test.expected)
 		}
 	}
 }
 
 func TestSplitPathWithCustomDelimiter(t *testing.T) {
-	matcher := NewMatcher(WithDelimiter("."))
+	matcher := NewMatcher(nil, WithDelimiter("."))
 
 	tests := []struct {
 		path     string
@@ -63,22 +63,22 @@ func TestSplitPathWithCustomDelimiter(t *testing.T) {
 	}{
 		{".", []string{}},
 		{".config", []string{"config"}},
-		{".config.database", []string{"config", "database"}},
-		{".config.database.", []string{"config", "database"}},
-		{".config.database.host", []string{"config", "database", "host"}},
+		{".config.db.host", []string{"config", "db", "host"}},
+		{".config.db.host.", []string{"config", "db", "host"}},
+		{"config.db.host", []string{"config", "db", "host"}},
 		{"", []string{}},
 	}
 
 	for _, test := range tests {
 		result := matcher.splitPath(test.path)
 		if !reflect.DeepEqual(result, test.expected) {
-			t.Errorf("For path '%s': expected %v, got %v", test.path, test.expected, result)
+			t.Errorf("splitPath(%q) = %v, expected %v", test.path, result, test.expected)
 		}
 	}
 }
 
 func TestJoinPath(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	tests := []struct {
 		segments []string
@@ -90,18 +90,22 @@ func TestJoinPath(t *testing.T) {
 		{[]string{"api", "users"}, "/api/users"},
 		{[]string{"", "api", "users"}, "/api/users"},
 		{[]string{"api", "", "users"}, "/api/users"},
+		{[]string{"/api", "users"}, "/api/users"},
+		{[]string{"/api/", "users"}, "/api/users"},
+		{[]string{"api", "/users"}, "/api/users"},
+		{[]string{"api", "users/"}, "/api/users"},
 	}
 
 	for _, test := range tests {
 		result := matcher.joinPath(test.segments...)
 		if result != test.expected {
-			t.Errorf("For segments %v: expected '%s', got '%s'", test.segments, test.expected, result)
+			t.Errorf("joinPath(%v) = %q, expected %q", test.segments, result, test.expected)
 		}
 	}
 }
 
 func TestJoinPathWithCustomDelimiter(t *testing.T) {
-	matcher := NewMatcher(WithDelimiter("."))
+	matcher := NewMatcher(nil, WithDelimiter("."))
 
 	tests := []struct {
 		segments []string
@@ -110,15 +114,19 @@ func TestJoinPathWithCustomDelimiter(t *testing.T) {
 		{[]string{}, "."},
 		{[]string{""}, "."},
 		{[]string{"config"}, ".config"},
-		{[]string{"config", "database"}, ".config.database"},
-		{[]string{"", "config", "database"}, ".config.database"},
-		{[]string{"config", "", "database"}, ".config.database"},
+		{[]string{"config", "db"}, ".config.db"},
+		{[]string{"", "config", "db"}, ".config.db"},
+		{[]string{"config", "", "db"}, ".config.db"},
+		{[]string{".config", "db"}, ".config.db"},
+		{[]string{".config.", "db"}, ".config.db"},
+		{[]string{"config", ".db"}, ".config.db"},
+		{[]string{"config", "db."}, ".config.db"},
 	}
 
 	for _, test := range tests {
 		result := matcher.joinPath(test.segments...)
 		if result != test.expected {
-			t.Errorf("For segments %v: expected '%s', got '%s'", test.segments, test.expected, result)
+			t.Errorf("joinPath(%v) = %q, expected %q", test.segments, result, test.expected)
 		}
 	}
 }

@@ -5,11 +5,11 @@ import (
 )
 
 func TestGroupBasics(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 创建分组
 	apiGroup := matcher.Group("/api")
-	
+
 	// 在分组中添加路径
 	apiGroup.MustAddPath("/users", WithName("用户列表"))
 	apiGroup.MustAddPath("/users/{id}", WithName("用户详情"))
@@ -39,7 +39,7 @@ func TestGroupBasics(t *testing.T) {
 }
 
 func TestNestedGroups(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 创建嵌套分组
 	apiGroup := matcher.Group("/api")
@@ -79,7 +79,7 @@ func TestNestedGroups(t *testing.T) {
 }
 
 func TestGroupWithOptions(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 创建带选项的分组
 	versionMeta := map[string]any{
@@ -113,7 +113,7 @@ func TestGroupWithOptions(t *testing.T) {
 }
 
 func TestGroupWithValidation(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	apiGroup := matcher.Group("/api")
 

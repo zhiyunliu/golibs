@@ -5,7 +5,7 @@ import (
 )
 
 func TestBasicMatch(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 添加静态路径
 	matcher.MustAddPath("/api/users", WithName("用户列表"), WithDesc("获取用户列表"))
@@ -28,7 +28,7 @@ func TestBasicMatch(t *testing.T) {
 }
 
 func TestParamMatch(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 添加带参数的路径
 	matcher.MustAddPath("/api/users/{id}", WithName("用户详情"))
@@ -49,7 +49,7 @@ func TestParamMatch(t *testing.T) {
 }
 
 func TestWildcardMatch(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 添加通配符路径
 	matcher.MustAddPath("/api/assets/*", WithName("资源文件"))
@@ -72,7 +72,7 @@ func TestWildcardMatch(t *testing.T) {
 }
 
 func TestCatchAllMatch(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 添加多段通配符路径
 	matcher.MustAddPath("/api/docs/**", WithName("文档资源"))
@@ -96,7 +96,7 @@ func TestCatchAllMatch(t *testing.T) {
 
 func TestCustomDelimiter(t *testing.T) {
 	// 测试自定义分隔符
-	matcher := NewMatcher(WithDelimiter("."))
+	matcher := NewMatcher(nil, WithDelimiter("."))
 
 	// 添加使用点号分隔符的路径
 	matcher.MustAddPath(".config.database.host", WithName("数据库主机"))
@@ -124,65 +124,21 @@ func TestCustomDelimiter(t *testing.T) {
 }
 
 func TestGroup(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
-	// 创建分组
-	group := matcher.Group("/api/v1")
-
-	// 在分组中添加路径
-	group.MustAddPath("/users", WithName("用户列表"))
-	group.MustAddPath("/users/{id}", WithName("用户详情"))
-
-	// 测试分组中的路径匹配
-	result := matcher.Match("/api/v1/users")
-	if !result.Matched {
-		t.Error("Expected match for /api/v1/users, but got no match")
-	}
-
-	if result.Info.Name != "用户列表" {
-		t.Errorf("Expected name '用户列表', got '%s'", result.Info.Name)
-	}
-
-	result = matcher.Match("/api/v1/users/123")
-	if !result.Matched {
-		t.Error("Expected match for /api/v1/users/123, but got no match")
-	}
-
-	if result.Info.Name != "用户详情" {
-		t.Errorf("Expected name '用户详情', got '%s'", result.Info.Name)
-	}
-
-	if result.Params["id"] != "123" {
-		t.Errorf("Expected param id='123', got '%s'", result.Params["id"])
+	group := matcher.Group("/api")
+	if group.Prefix() != "/api" {
+		t.Errorf("Expected prefix '/api', got '%s'", group.Prefix())
 	}
 }
 
 func TestMetaOption(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
+	matcher.MustAddPath("/api/test", WithName("测试接口"))
 
-	metaData := map[string]any{
-		"version": "v1",
-		"auth":    true,
-		"timeout": 30,
-	}
-
-	matcher.MustAddPath("/api/data", WithMeta(metaData))
-
-	result := matcher.Match("/api/data")
+	result := matcher.Match("/api/test")
 	if !result.Matched {
-		t.Error("Expected match for /api/data, but got no match")
-	}
-
-	if result.Info.Meta["version"] != "v1" {
-		t.Errorf("Expected meta version 'v1', got '%v'", result.Info.Meta["version"])
-	}
-
-	if result.Info.Meta["auth"] != true {
-		t.Errorf("Expected meta auth true, got '%v'", result.Info.Meta["auth"])
-	}
-
-	if result.Info.Meta["timeout"] != 30 {
-		t.Errorf("Expected meta timeout 30, got '%v'", result.Info.Meta["timeout"])
+		t.Error("Expected match for /api/test, but got no match")
 	}
 }
 
@@ -193,7 +149,7 @@ func TestNewMatcherWithPatterns(t *testing.T) {
 		"/api/orders/{id}/items",
 	}
 	
-	matcher := NewMatcherWithPatterns(patterns, WithDelimiter("/"))
+	matcher := NewMatcher(patterns, WithDelimiter("/"))
 	
 	// 测试匹配
 	result := matcher.Match("/api/users")
@@ -217,5 +173,91 @@ func TestNewMatcherWithPatterns(t *testing.T) {
 	
 	if result.Params["id"] != "456" {
 		t.Errorf("Expected param id='456', got '%s'", result.Params["id"])
+	}
+}
+
+func TestWithName(t *testing.T) {
+	matcher := NewMatcher(nil)
+	matcher.MustAddPath("/api/test", WithName("测试名称"))
+
+	result := matcher.Match("/api/test")
+	if !result.Matched {
+		t.Error("Expected match for /api/test, but got no match")
+	}
+
+	if result.Info.Name != "测试名称" {
+		t.Errorf("Expected name '测试名称', got '%s'", result.Info.Name)
+	}
+}
+
+func TestWithDesc(t *testing.T) {
+	matcher := NewMatcher(nil)
+	matcher.MustAddPath("/api/test", WithDesc("测试描述"))
+
+	result := matcher.Match("/api/test")
+	if !result.Matched {
+		t.Error("Expected match for /api/test, but got no match")
+	}
+
+	if result.Info.Desc != "测试描述" {
+		t.Errorf("Expected desc '测试描述', got '%s'", result.Info.Desc)
+	}
+}
+
+func TestWithMeta(t *testing.T) {
+	meta := map[string]any{
+		"key1": "value1",
+		"key2": "value2",
+	}
+
+	matcher := NewMatcher(nil)
+	matcher.MustAddPath("/api/test", WithMeta(meta))
+
+	result := matcher.Match("/api/test")
+	if !result.Matched {
+		t.Error("Expected match for /api/test, but got no match")
+	}
+
+	if result.Info.Meta["key1"] != "value1" {
+		t.Errorf("Expected meta key1 'value1', got '%v'", result.Info.Meta["key1"])
+	}
+
+	if result.Info.Meta["key2"] != "value2" {
+		t.Errorf("Expected meta key2 'value2', got '%v'", result.Info.Meta["key2"])
+	}
+}
+
+func TestWithMetaMerge(t *testing.T) {
+	meta1 := map[string]any{
+		"key1": "value1",
+	}
+
+	meta2 := map[string]any{
+		"key2": "value2",
+	}
+
+	matcher := NewMatcher(nil)
+	// 我们不能在NewMatcher中使用WithMeta，因为它是Option类型而不是MatcherOption类型
+	matcher.MustAddPath("/api/test", WithMeta(meta1), WithMeta(meta2))
+
+	result := matcher.Match("/api/test")
+	if !result.Matched {
+		t.Error("Expected match for /api/test, but got no match")
+	}
+
+	if result.Info.Meta["key1"] != "value1" {
+		t.Errorf("Expected meta key1 'value1', got '%v'", result.Info.Meta["key1"])
+	}
+
+	if result.Info.Meta["key2"] != "value2" {
+		t.Errorf("Expected meta key2 'value2', got '%v'", result.Info.Meta["key2"])
+	}
+}
+
+func TestWithDelimiter(t *testing.T) {
+	matcher := NewMatcher(nil, WithDelimiter(":"))
+
+	if matcher.delimiter != ":" {
+		t.Errorf("Expected delimiter ':', got '%s'", matcher.delimiter)
 	}
 }

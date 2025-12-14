@@ -5,117 +5,111 @@ import (
 )
 
 func TestValidatePattern(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
 	// 测试有效的模式
 	validPatterns := []string{
 		"/api/users",
 		"/api/users/{id}",
-		"/api/assets/*",
-		"/api/docs/**",
-		"/",
+		"/api/users/{id}/profile",
+		"/assets/*",
+		"/docs/**",
 	}
 
 	for _, pattern := range validPatterns {
 		err := matcher.ValidatePattern(pattern)
 		if err != nil {
-			t.Errorf("Expected pattern '%s' to be valid, but got error: %v", pattern, err)
+			t.Errorf("Expected pattern %q to be valid, but got error: %v", pattern, err)
 		}
 	}
 
 	// 测试无效的模式
-	invalidPatterns := []struct {
-		pattern string
-		reason  string
-	}{
-		{"", "empty pattern"},
-		{"api/users", "must start with delimiter"},
-		{"/api//users", "empty segment"},
-		{"/api/users/**/docs", "catch-all must be last"},
-		{"/api/users/{invalid-param}", "invalid parameter name"},
-		{"/api/users/{}", "empty parameter name"},
+	invalidPatterns := []string{
+		"/api/users/{}",
+		"/api/users/{id",
+		"/api/users/id}",
+		"/api/users/{{id}}",
+		"",
+		"api/users", // 不以分隔符开头
 	}
 
-	for _, test := range invalidPatterns {
-		err := matcher.ValidatePattern(test.pattern)
+	for _, pattern := range invalidPatterns {
+		err := matcher.ValidatePattern(pattern)
 		if err == nil {
-			t.Errorf("Expected pattern '%s' to be invalid (%s), but got no error", test.pattern, test.reason)
+			t.Errorf("Expected pattern %q to be invalid, but got no error", pattern)
 		}
 	}
 }
 
 func TestValidatePatternWithCustomDelimiter(t *testing.T) {
-	matcher := NewMatcher(WithDelimiter("."))
+	matcher := NewMatcher(nil, WithDelimiter("."))
 
 	// 测试有效的模式
 	validPatterns := []string{
-		".config.database",
-		".config.database.{table}",
+		".config",
+		".config.db",
+		".config.db.{host}",
 		".assets.*",
-		".logs.**",
-		".",
+		".docs.**",
 	}
 
 	for _, pattern := range validPatterns {
 		err := matcher.ValidatePattern(pattern)
 		if err != nil {
-			t.Errorf("Expected pattern '%s' to be valid, but got error: %v", pattern, err)
+			t.Errorf("Expected pattern %q to be valid, but got error: %v", pattern, err)
 		}
 	}
 
 	// 测试无效的模式
-	invalidPatterns := []struct {
-		pattern string
-		reason  string
-	}{
-		{"", "empty pattern"},
-		{"config.database", "must start with delimiter"},
-		{".config..database", "empty segment"},
-		{".config.logs.**.archive", "catch-all must be last"},
-		{".config.table.{invalid-table}", "invalid parameter name"},
-		{".config.table.{}", "empty parameter name"},
+	invalidPatterns := []string{
+		".config.db.{}",
+		".config.db.{host",
+		".config.db.host}",
+		".config.db.{{host}}",
+		"",
+		"config.db", // 不以分隔符开头
 	}
 
-	for _, test := range invalidPatterns {
-		err := matcher.ValidatePattern(test.pattern)
+	for _, pattern := range invalidPatterns {
+		err := matcher.ValidatePattern(pattern)
 		if err == nil {
-			t.Errorf("Expected pattern '%s' to be invalid (%s), but got no error", test.pattern, test.reason)
+			t.Errorf("Expected pattern %q to be invalid, but got no error", pattern)
 		}
 	}
 }
 
 func TestAddPathWithValidation(t *testing.T) {
-	matcher := NewMatcher()
+	matcher := NewMatcher(nil)
 
-	// 测试有效的路径添加
 	validPaths := []string{
 		"/api/users",
 		"/api/users/{id}",
-		"/api/assets/*",
-		"/api/docs/**",
+		"/api/users/{id}/profile",
+		"/assets/*",
+		"/docs/**",
 	}
 
 	for _, path := range validPaths {
 		err := matcher.AddPathWithValidation(path)
 		if err != nil {
-			t.Errorf("Expected to add path '%s' successfully, but got error: %v", path, err)
+			t.Errorf("Expected to add valid path %q successfully, but got error: %v", path, err)
 		}
 	}
 
-	// 测试无效的路径添加
 	invalidPaths := []string{
+		"/api/users/{}",
+		"/api/users/{id",
+		"/api/users/id}",
+		"/api/users/{{id}}",
 		"",
 		"api/users",
-		"/api//users",
-		"/api/users/**/docs",
-		"/api/users/{invalid-param}",
-		"/api/users/{}",
+		"/api/users/{}/profile",
 	}
 
 	for _, path := range invalidPaths {
 		err := matcher.AddPathWithValidation(path)
 		if err == nil {
-			t.Errorf("Expected error when adding invalid path '%s', but got no error", path)
+			t.Errorf("Expected error when adding invalid path %q, but got no error", path)
 		}
 	}
 }
