@@ -9,7 +9,7 @@ type Group struct {
 }
 
 // NewGroup 创建路径分组
-func (m *Matcher) NewGroup(prefix string, options ...Option) *Group {
+func (m *Matcher) Group(prefix string, options ...Option) *Group {
 	return &Group{
 		matcher:   m,
 		prefix:    prefix,
@@ -53,8 +53,8 @@ func (g *Group) AddPathWithValidation(pattern string, options ...Option) error {
 	return g.matcher.AddPath(fullPattern, allOptions...)
 }
 
-// NewSubGroup 创建子分组
-func (g *Group) NewSubGroup(prefix string, options ...Option) *Group {
+// Group 创建子分组
+func (g *Group) Group(prefix string, options ...Option) *Group {
 	fullPrefix := g.matcher.joinPath(g.prefix, prefix)
 
 	// 合并父分组和子分组的选项
