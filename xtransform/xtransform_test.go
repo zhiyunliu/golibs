@@ -1,6 +1,7 @@
 package xtransform
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -45,6 +46,48 @@ func TestTranslateMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := TranslateMap(tt.tpl, tt.data); got != tt.want {
 				t.Errorf("TranslateMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTranslateCallback(t *testing.T) {
+	tests := []struct {
+		name     string
+		tpl      string
+		callback func(string) string
+		want     string
+	}{
+		{
+			name:     "uppercase conversion",
+			tpl:      "aaa:@bbb:@{ccc}",
+			callback: strings.ToUpper,
+			want:     "aaa:BBB:CCC",
+		},
+		{
+			name:     "prefix addition",
+			tpl:      "hello:@{world}",
+			callback: func(s string) string { return "my" + s },
+			want:     "hello:myworld",
+		},
+		{
+			name:     "empty callback",
+			tpl:      "@aaa:@bbb:@{ccc}",
+			callback: func(s string) string { return "" },
+			want:     "::",
+		},
+		{
+			name:     "no vars",
+			tpl:      "hello:world",
+			callback: strings.ToUpper,
+			want:     "hello:world",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := TranslateCallback(tt.tpl, tt.callback); got != tt.want {
+				t.Errorf("TranslateCallback() = %v, want %v", got, tt.want)
 			}
 		})
 	}

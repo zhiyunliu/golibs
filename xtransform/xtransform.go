@@ -22,6 +22,12 @@ func TranslateMap(tpl string, data map[string]string) string {
 	return xTranslate(tpl, data)
 }
 
+// TranslateCallback 使用回调函数进行模板转换
+// eg: str="aaa:@bbb:@{ccc}" callback=function(key) { return strings.ToUpper(key) } ==> "aaa:BBB:CCC"
+func TranslateCallback(tpl string, callback func(param string) string) string {
+	return translateWithCallback(tpl, callback)
+}
+
 // GenericTranslate 泛型模板转换字符串
 func GenericTranslate[T any](tpl string, data T) string {
 	var tmpData any = data
@@ -62,6 +68,16 @@ func toString(v any) string {
 }
 
 func xTranslate[T any](template string, data map[string]T) string {
+	return translateWithCallback(template, func(key string) string {
+		if value, ok := data[key]; ok {
+			return toString(value)
+		}
+		return ""
+	})
+}
+
+// translateWithCallback 使用回调函数处理模板的核心逻辑
+func translateWithCallback(template string, callback func(param string) string) string {
 	var builder strings.Builder
 	var keyBuilder strings.Builder
 	inVar := false
@@ -86,10 +102,8 @@ func xTranslate[T any](template string, data map[string]T) string {
 		case inVar && inBrace && c == '}':
 			// 结束@{var}模式
 			key := keyBuilder.String()
-			if value, ok := data[key]; ok {
-				builder.WriteString(toString(value))
-			}
-			// 不存在的值不做任何输出（即替换为空字符串）
+			value := callback(key)
+			builder.WriteString(value)
 			keyBuilder.Reset()
 			inVar = false
 			inBrace = false
@@ -97,10 +111,8 @@ func xTranslate[T any](template string, data map[string]T) string {
 		case inVar && !inBrace && !((cs <= c && c <= ce) || (ucs <= c && c <= uce)):
 			// 结束@var模式（遇到分隔符）
 			key := keyBuilder.String()
-			if value, ok := data[key]; ok {
-				builder.WriteString(toString(value))
-			}
-			// 不存在的值不做任何输出
+			value := callback(key)
+			builder.WriteString(value)
 			keyBuilder.Reset()
 			inVar = false
 			builder.WriteByte(c) // 写入当前字符
@@ -109,10 +121,8 @@ func xTranslate[T any](template string, data map[string]T) string {
 			// 字符串末尾的@var模式
 			keyBuilder.WriteByte(c)
 			key := keyBuilder.String()
-			if value, ok := data[key]; ok {
-				builder.WriteString(toString(value))
-			}
-			// 不存在的值不做任何输出
+			value := callback(key)
+			builder.WriteString(value)
 			keyBuilder.Reset()
 			inVar = false
 
