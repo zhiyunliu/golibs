@@ -87,14 +87,14 @@ func translateWithCallback(template string, callback func(param string) string) 
 	ce := byte('z')
 	uce := byte('Z')
 
-	for i := 0; i < len(template); i++ {
+	for i, cnt := 0, len(template); i < cnt; i++ {
 		c := template[i]
 
 		switch {
 		case c == '@' && !inVar:
 			// 开始变量
 			inVar = true
-			if i+1 < len(template) && template[i+1] == '{' {
+			if i+1 < cnt && template[i+1] == '{' {
 				inBrace = true
 				i++ // 跳过'{'
 			}
@@ -117,7 +117,7 @@ func translateWithCallback(template string, callback func(param string) string) 
 			inVar = false
 			builder.WriteByte(c) // 写入当前字符
 
-		case inVar && !inBrace && i == len(template)-1:
+		case inVar && !inBrace && i == cnt-1:
 			// 字符串末尾的@var模式
 			keyBuilder.WriteByte(c)
 			key := keyBuilder.String()
