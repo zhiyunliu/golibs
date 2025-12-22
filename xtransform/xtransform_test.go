@@ -19,6 +19,11 @@ func TestTranslate(t *testing.T) {
 		{name: "2.str", tpl: "aaa:bbb:@{ccc}", data: map[string]interface{}{"ccc": 200}, want: "aaa:bbb:200"},
 		{name: "2.str", tpl: "aaa:@bbb:@{ccc}", data: map[string]interface{}{"bbb": "abcd", "ccc": "200"}, want: "aaa:abcd:200"},
 		{name: "2.str", tpl: "@aaa:@bbb:@{ccc}", data: map[string]interface{}{"bbb": "abcd", "ccc": "300"}, want: ":abcd:300"},
+		// 新增测试用例：支持{variable}格式
+		{name: "simple brace", tpl: "aaa:bbb:{ccc}", data: map[string]interface{}{"ccc": 100}, want: "aaa:bbb:100"},
+		{name: "mixed formats", tpl: "aaa:{bbb}:@{ccc}", data: map[string]interface{}{"bbb": "xyz", "ccc": 200}, want: "aaa:xyz:200"},
+		{name: "mixed formats2", tpl: "aaa:@bbb:{ccc}", data: map[string]interface{}{"bbb": "xyz", "ccc": 300}, want: "aaa:xyz:300"},
+		{name: "special-char-1", tpl: "a-aa:@bbb:{ccc}", data: map[string]interface{}{"bbb": "xyz", "ccc": 300}, want: "a-aa:xyz:300"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -41,6 +46,9 @@ func TestTranslateMap(t *testing.T) {
 		{name: "2.str", tpl: "aaa:bbb:@{ccc}", data: map[string]string{"ccc": "200"}, want: "aaa:bbb:200"},
 		{name: "2.str", tpl: "aaa:@bbb:@{ccc}", data: map[string]string{"bbb": "abcd", "ccc": "200"}, want: "aaa:abcd:200"},
 		{name: "2.str", tpl: "@aaa:@bbb:@{ccc}", data: map[string]string{"bbb": "abcd", "ccc": "300"}, want: ":abcd:300"},
+		// 新增测试用例：支持{variable}格式
+		{name: "simple brace", tpl: "aaa:bbb:{ccc}", data: map[string]string{"ccc": "100"}, want: "aaa:bbb:100"},
+		{name: "mixed formats", tpl: "aaa:{bbb}:@{ccc}", data: map[string]string{"bbb": "xyz", "ccc": "200"}, want: "aaa:xyz:200"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -82,6 +82,7 @@ func translateWithCallback(template string, callback func(param string) string) 
 	var keyBuilder strings.Builder
 	inVar := false
 	inBrace := false
+	inSimpleBrace := false // 新增：标记是否处于简单大括号模式
 	cs := byte('a')
 	ucs := byte('A')
 	ce := byte('z')
@@ -99,6 +100,11 @@ func translateWithCallback(template string, callback func(param string) string) 
 				i++ // 跳过'{'
 			}
 
+		case c == '{' && !inVar:
+			// 新增：开始简单大括号模式 {variable}
+			inVar = true
+			inSimpleBrace = true
+
 		case inVar && inBrace && c == '}':
 			// 结束@{var}模式
 			key := keyBuilder.String()
@@ -108,7 +114,16 @@ func translateWithCallback(template string, callback func(param string) string) 
 			inVar = false
 			inBrace = false
 
-		case inVar && !inBrace && !((cs <= c && c <= ce) || (ucs <= c && c <= uce)):
+		case inVar && inSimpleBrace && c == '}':
+			// 新增：结束{var}模式
+			key := keyBuilder.String()
+			value := callback(key)
+			builder.WriteString(value)
+			keyBuilder.Reset()
+			inVar = false
+			inSimpleBrace = false
+
+		case inVar && !inBrace && !inSimpleBrace && !((cs <= c && c <= ce) || (ucs <= c && c <= uce)):
 			// 结束@var模式（遇到分隔符）
 			key := keyBuilder.String()
 			value := callback(key)
@@ -117,7 +132,7 @@ func translateWithCallback(template string, callback func(param string) string) 
 			inVar = false
 			builder.WriteByte(c) // 写入当前字符
 
-		case inVar && !inBrace && i == cnt-1:
+		case inVar && !inBrace && !inSimpleBrace && i == cnt-1:
 			// 字符串末尾的@var模式
 			keyBuilder.WriteByte(c)
 			key := keyBuilder.String()
