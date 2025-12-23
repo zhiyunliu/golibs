@@ -1,295 +1,222 @@
 package v2
 
-import "strings"
+import (
+	"strings"
+	"sync"
 
-// Matcher 路径匹配器
-type Matcher struct {
-	root      *TreeNode
-	delimiter string
+	cmap "github.com/orcaman/concurrent-map/v2"
+	"github.com/zhiyunliu/golibs/xpath"
+)
+
+type Pattern interface {
+	Pattern() string
 }
 
-// NewMatcher 创建新匹配器
-func NewMatcher(patterns []string, options ...MatcherOption) *Matcher {
+type Patterns []Pattern
+
+type StrPattern string
+
+func (p StrPattern) Pattern() string {
+	return string(p)
+}
+
+// Matcher 基于前缀树的匹配器
+type Matcher struct {
+	patterns  []xpath.Pattern
+	Delimiter string
+	mutex     sync.Mutex
+	cache     *matchCacheWrap
+}
+
+type matchCacheWrap struct {
+	enable   bool
+	cacheMap cmap.ConcurrentMap[string, xpath.Pattern]
+}
+
+func (w *matchCacheWrap) Get(key string) (val xpath.Pattern, ok bool) {
+	if !w.enable {
+		return
+	}
+	val, ok = w.cacheMap.Get(key)
+	return
+}
+
+func (w *matchCacheWrap) SetIfAbsent(key string, val xpath.Pattern) bool {
+	if !w.enable {
+		return false
+	}
+	return w.cacheMap.SetIfAbsent(key, val)
+}
+
+// NewMatcher 创建一个新的匹配器
+func NewMatcher(pathList []string, opts ...Option) *Matcher {
+	patterns := make([]xpath.Pattern, len(pathList))
+	for i := range pathList {
+		patterns[i] = xpath.StrPattern(pathList[i])
+	}
+	return NewMatcherPatterns(patterns, opts...)
+}
+
+// NewMatcherPatterns 使用Pattern切片创建匹配器
+func NewMatcherPatterns(pathList []xpath.Pattern, opts ...Option) *Matcher {
 	m := &Matcher{
-		delimiter: "/", // 默认分隔符为 "/"
+		patterns:  pathList,
+		Delimiter: "/",
+		cache: &matchCacheWrap{
+			cacheMap: cmap.New[xpath.Pattern](),
+		},
 	}
 
-	// 应用选项
-	for _, opt := range options {
+	for _, opt := range opts {
 		opt(m)
-	}
-
-	// 初始化根节点
-	m.root = &TreeNode{
-		segment:  m.delimiter,
-		nodeType: StaticNode,
-		children: make([]*TreeNode, 0),
-		info:     &NodeInfo{},
-	}
-
-	// 添加初始路径模式
-	for _, pattern := range patterns {
-		_ = m.AddPath(pattern) //忽略验证错误信息
 	}
 
 	return m
 }
 
-// AddPath 添加路径规则
-func (m *Matcher) AddPath(pattern string, options ...Option) error {
-	if pattern == "" || pattern[0] != m.delimiter[0] {
-		return NewMatcherError("pattern must start with delimiter", pattern)
-	}
-
-	// 解析并收集所有选项
-	info := &NodeInfo{}
-	for _, opt := range options {
-		opt(info)
-	}
-
-	segments := m.splitPath(pattern)
-	m.root.insert(m, segments, 0, info)
-	return nil
-}
-
-// MustAddPath 添加路径规则（panic版本）
-func (m *Matcher) MustAddPath(pattern string, options ...Option) {
-	if err := m.AddPath(pattern, options...); err != nil {
-		panic(err)
-	}
-}
-
-// Match 匹配URL
-func (m *Matcher) Match(path string) *MatchResult {
-	if path == "" || path[0] != m.delimiter[0] {
-		return &MatchResult{Matched: false}
-	}
-
-	segments := m.splitPath(path)
-	params := make(map[string]string)
-
-	info := m.root.search(m, segments, 0, params)
-	if info != nil {
-		return &MatchResult{
-			Matched: true,
-			Info:    info,
-			Params:  params,
+// Match 尝试匹配给定的路径
+func (m *Matcher) Match(path string) (match bool, pattern xpath.Pattern) {
+	sep := m.Delimiter
+	cacheKey := ""
+	if m.CanUseCache() {
+		cacheKey = m.buildCacheKey(path, sep)
+		if val, ok := m.cache.Get(cacheKey); ok {
+			return true, val
 		}
 	}
 
-	return &MatchResult{Matched: false}
+	for _, p := range m.patterns {
+		if matchPathPattern(path, p.Pattern(), sep) {
+			if m.CanUseCache() {
+				m.cache.SetIfAbsent(cacheKey, p)
+			}
+			return true, p
+		}
+	}
+	return false, nil
 }
 
-// splitPath 分割路径
-func (m *Matcher) splitPath(path string) []string {
-	trimmed := strings.TrimPrefix(strings.TrimSuffix(path, m.delimiter), m.delimiter)
-	if trimmed == "" {
-		return []string{}
+// matchPathPattern 检查路径是否匹配给定模式
+func matchPathPattern(path, pattern, sep string) bool {
+	// 直接相等的情况
+	if path == pattern {
+		return true
 	}
-	return strings.Split(trimmed, m.delimiter)
+
+	pathParts := strings.Split(path, sep)
+	patternParts := strings.Split(pattern, sep)
+
+	// 处理以分隔符开头的情况
+	if len(pathParts) > 0 && pathParts[0] == "" {
+		pathParts = pathParts[1:]
+	}
+	if len(patternParts) > 0 && patternParts[0] == "" {
+		patternParts = patternParts[1:]
+	}
+
+	return matchParts(pathParts, patternParts)
 }
 
-// joinPath 连接路径段
-func (m *Matcher) joinPath(segments ...string) string {
-	if len(segments) == 0 {
-		return m.delimiter
+// matchParts 匹配路径段数组
+func matchParts(pathParts, patternParts []string) bool {
+	return matchPartsRecursive(pathParts, patternParts, 0, 0)
+}
+
+// matchPartsRecursive 递归匹配路径段
+func matchPartsRecursive(pathParts, patternParts []string, pathIdx, patternIdx int) bool {
+	// 如果模式已经遍历完，只有当路径也遍历完时才匹配
+	if patternIdx == len(patternParts) {
+		return pathIdx == len(pathParts)
 	}
 
-	// 过滤掉空字符串并正确处理已经包含分隔符的段
-	var filtered []string
-	for _, seg := range segments {
-		if seg != "" {
-			// 如果段已经以分隔符开头或结尾，则去除它们
-			trimmedSeg := strings.TrimPrefix(strings.TrimSuffix(seg, m.delimiter), m.delimiter)
-			if trimmedSeg != "" {
-				filtered = append(filtered, trimmedSeg)
+	// 检查当前模式段
+	currentPattern := patternParts[patternIdx]
+
+	// 如果是 ** 模式
+	if currentPattern == "**" {
+		// ** 可以匹配0个或多个路径段
+		// 尝试匹配0个路径段（即跳过**）
+		if matchPartsRecursive(pathParts, patternParts, pathIdx, patternIdx+1) {
+			return true
+		}
+		// 尝试匹配1个或多个路径段
+		for i := pathIdx; i < len(pathParts); i++ {
+			if matchPartsRecursive(pathParts, patternParts, i+1, patternIdx+1) {
+				return true
 			}
 		}
+		return false
 	}
 
-	if len(filtered) == 0 {
-		return m.delimiter
+	// 如果路径已经遍历完但模式还有剩余，且下一个模式不是**
+	if pathIdx == len(pathParts) {
+		return false
 	}
 
-	return m.delimiter + strings.Join(filtered, m.delimiter)
+	// 检查当前路径段是否匹配当前模式段
+	currentPath := pathParts[pathIdx]
+
+	if currentPattern == "*" || matchLiteral(currentPattern, currentPath) {
+		// 当前段匹配，继续匹配剩余部分
+		return matchPartsRecursive(pathParts, patternParts, pathIdx+1, patternIdx+1)
+	}
+
+	return false
 }
 
-// insert 插入路由节点
-func (n *TreeNode) insert(m *Matcher, segments []string, depth int, info *NodeInfo) {
-	if depth >= len(segments) {
-		// 合并节点信息（如果已存在）
-		if n.info != nil {
-			// 合并Meta
-			if info.Meta != nil {
-				if n.info.Meta == nil {
-					n.info.Meta = make(map[string]any)
-				}
-				for k, v := range info.Meta {
-					n.info.Meta[k] = v
-				}
-			}
-			// 更新名称和描述（如果提供了）
-			if info.Name != "" {
-				n.info.Name = info.Name
-			}
-			if info.Desc != "" {
-				n.info.Desc = info.Desc
-			}
-		} else {
-			n.info = info
-		}
-		n.isLeaf = true
-		return
+// matchLiteral 检查字面量模式是否匹配当前路径段，支持 * 通配符
+func matchLiteral(pattern, value string) bool {
+	// 如果模式中不包含 *，则直接比较
+	if !strings.Contains(pattern, "*") {
+		return pattern == value
 	}
 
-	segment := segments[depth]
-	nodeType, paramName := parseSegment(segment)
-
-	// 检查是否已存在相同段
-	n.childLock.Lock()
-	defer n.childLock.Unlock()
-
-	for _, child := range n.children {
-		if child.segment == segment {
-			child.insert(m, segments, depth+1, info)
-			return
-		}
-	}
-
-	// 创建新节点
-	newNode := &TreeNode{
-		segment:   segment,
-		nodeType:  nodeType,
-		paramName: paramName,
-		children:  make([]*TreeNode, 0),
-		info:      &NodeInfo{}, // 初始化空info
-	}
-
-	n.children = append(n.children, newNode)
-	newNode.insert(m, segments, depth+1, info)
+	// 使用简单的通配符匹配
+	return simpleMatch(value, pattern)
 }
 
-// search 搜索匹配的路由
-func (n *TreeNode) search(m *Matcher, segments []string, depth int, params map[string]string) *NodeInfo {
-	// 如果到达末尾，返回当前节点信息（如果是叶子节点）
-	// 同时检查是否有CatchAllNode子节点可以直接匹配
-	if depth >= len(segments) {
-		if n.isLeaf {
-			return n.info
-		}
+// simpleMatch 实现简单的通配符匹配
+func simpleMatch(text, pattern string) bool {
+	tIdx, pIdx := 0, 0
+	tLen, pLen := len(text), len(pattern)
 
-		// 检查是否有CatchAllNode子节点
-		n.childLock.RLock()
-		defer n.childLock.RUnlock()
+	var starIdx, matchIdx int = -1, -1
 
-		for _, child := range n.children {
-			if child.nodeType == CatchAllNode && child.isLeaf {
-				return child.info
+	for tIdx < tLen {
+		// 如果字符匹配或模式是 '?'
+		if pIdx < pLen && (pattern[pIdx] == '*' || pattern[pIdx] == text[tIdx]) {
+			if pattern[pIdx] == '*' {
+				starIdx = pIdx
+				matchIdx = tIdx
+				pIdx++
+			} else {
+				pIdx++
+				tIdx++
 			}
-		}
-
-		return nil
-	}
-
-	segment := segments[depth]
-
-	n.childLock.RLock()
-	defer n.childLock.RUnlock()
-
-	// 优先级：静态匹配 > 参数匹配 > 通配符匹配 > 多段匹配
-
-	// 1. 尝试静态匹配
-	for _, child := range n.children {
-		if child.nodeType == StaticNode && child.segment == segment {
-			if info := child.search(m, segments, depth+1, params); info != nil {
-				return info
-			}
+		} else if starIdx != -1 { // 如果遇到不匹配但之前有 '*'
+			pIdx = starIdx + 1
+			matchIdx++
+			tIdx = matchIdx
+		} else { // 如果不匹配且没有 '*'，返回 false
+			return false
 		}
 	}
 
-	// 2. 尝试参数匹配
-	for _, child := range n.children {
-		if child.nodeType == ParamNode {
-			params[child.paramName] = segment
-			if info := child.search(m, segments, depth+1, params); info != nil {
-				return info
-			}
-			// 回溯：删除参数
-			delete(params, child.paramName)
+	// 检查模式剩余部分是否都是 '*'
+	for pIdx < pLen {
+		if pattern[pIdx] != '*' {
+			return false
 		}
+		pIdx++
 	}
 
-	// 3. 尝试单段通配符
-	for _, child := range n.children {
-		if child.nodeType == WildcardNode {
-			if info := child.search(m, segments, depth+1, params); info != nil {
-				return info
-			}
-		}
-	}
-
-	// 4. 尝试多段通配符（**）
-	for _, child := range n.children {
-		if child.nodeType == CatchAllNode {
-			// ** 可以匹配剩余的所有段，包括零个段
-			if child.isLeaf {
-				return child.info
-			}
-		}
-	}
-
-	return nil
+	return true
 }
 
-// Walk 遍历所有路径
-func (m *Matcher) Walk(visit func(pattern string, info *NodeInfo)) {
-	m.root.walk(m, "", visit)
+func (m *Matcher) CanUseCache() bool {
+	return m.cache.enable
 }
 
-// walk 遍历节点
-func (n *TreeNode) walk(m *Matcher, currentPath string, visit func(pattern string, info *NodeInfo)) {
-	if n.isLeaf && n.info != nil {
-		visit(currentPath, n.info)
-	}
-
-	n.childLock.RLock()
-	defer n.childLock.RUnlock()
-
-	for _, child := range n.children {
-		childPath := m.joinPath(currentPath, child.segment)
-		child.walk(m, childPath, visit)
-	}
-}
-
-// FindPath 查找指定路径模式
-func (m *Matcher) FindPath(pattern string) (*NodeInfo, bool) {
-	segments := m.splitPath(pattern)
-	params := make(map[string]string)
-
-	info := m.root.findExact(m, segments, 0, params)
-	return info, info != nil
-}
-
-// findExact 精确查找（不匹配参数和通配符）
-func (n *TreeNode) findExact(m *Matcher, segments []string, depth int, params map[string]string) *NodeInfo {
-	if depth >= len(segments) {
-		if n.isLeaf {
-			return n.info
-		}
-		return nil
-	}
-
-	segment := segments[depth]
-
-	n.childLock.RLock()
-	defer n.childLock.RUnlock()
-
-	for _, child := range n.children {
-		// 只匹配相同的segment
-		if child.segment == segment {
-			return child.findExact(m, segments, depth+1, params)
-		}
-	}
-
-	return nil
+func (m *Matcher) buildCacheKey(path, sep string) string {
+	return sep + ":" + path
 }

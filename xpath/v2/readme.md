@@ -1,34 +1,77 @@
-# xpath/v2
+# xpath v2
 
-路径匹配器，支持参数匹配、通配符匹配和多段匹配。
+基于树匹配算法的路径匹配器，支持 `*` 和 `**` 的匹配规则。
 
-## 使用示例
+## 特性
+
+- 使用递归匹配算法进行路径匹配
+- 支持 `*` 匹配单个路径段
+- 支持 `**` 匹配零个或多个路径段
+- 支持自定义分隔符
+- 支持通配符模式匹配（如 `aaa*`）
+- 支持缓存机制以提高性能
+
+## 用法
 
 ```go
-import "github.com/zhiyunliu/golibs/xpath/v2"
+package main
 
-// 创建匹配器
-matcher := NewMatcher(nil)
+import (
+    "fmt"
+    "github.com/zhiyunliu/golibs/xpath/v2"
+)
 
-// 添加路径规则
-matcher.MustAddPath("/api/users", WithName("用户列表"))
-matcher.MustAddPath("/api/users/{id}", WithName("用户详情"))
-matcher.MustAddPath("/api/assets/*", WithName("资源文件"))
-matcher.MustAddPath("/api/docs/**", WithName("文档资源"))
-
-// 匹配路径
-result := matcher.Match("/api/users/123")
-if result.Matched {
-    fmt.Println("匹配成功:", result.Info.Name) // 用户详情
-    fmt.Println("参数:", result.Params["id"]) // 123
+func main() {
+    // 创建匹配器实例
+    matcher := v2.NewMatcher([]string{
+        "/api/users/*",
+        "/api/products/**",
+        "/static/**",
+        "/*.js",
+    })
+    
+    // 执行匹配
+    match, pattern := matcher.Match("/api/users/123")
+    fmt.Printf("Match: %v, Pattern: %s\n", match, pattern)
+    
+    // 使用自定义分隔符
+    matcherWithDot := v2.NewMatcher([]string{
+        ".**.a.b.js", 
+        ".config.*",
+    }, v2.WithDelimiter("."))
+    
+    match, pattern = matcherWithDot.Match(".aa.bb.a.b.js", ".")
+    fmt.Printf("Match: %v, Pattern: %s\n", match, pattern)
 }
 ```
 
-## 自定义分隔符
+## API
 
-```go
-// 使用自定义分隔符
-matcher := NewMatcher(nil, WithDelimiter("."))
-matcher.MustAddPath(".config.database.host", WithName("数据库主机"))
-result := matcher.Match(".config.database.host")
-```
+### NewMatcher(pathList []string, opts ...Option) *Matcher
+
+创建一个新的匹配器实例，接受路径列表和选项参数。
+
+### NewMatcherPatterns(pathList []Pattern, opts ...Option) *Matcher
+
+使用Pattern接口切片创建匹配器实例。
+
+### Match(path string, spls ...string) (match bool, pattern string)
+
+执行路径匹配，返回是否匹配成功和匹配的模式。
+
+## 选项
+
+### WithCache(enable bool)
+
+启用或禁用缓存功能。
+
+### WithDelimiter(delimiter string)
+
+设置路径分隔符，默认为"/"。
+
+## 匹配规则
+
+- `*` 匹配单个路径段（例如 `/api/*` 匹配 `/api/users` 但不匹配 `/api/users/123`）
+- `**` 匹配零个或多个路径段（例如 `/api/**` 匹配 `/api/users`、`/api/users/123`、`/api/users/123/posts` 等）
+- 文本匹配支持通配符（例如 `/api/aaa*` 匹配 `/api/aaabbb`）
+- 精确匹配（例如 `/api/users` 只匹配 `/api/users`）
