@@ -113,7 +113,7 @@ func TestPathMatch_slash_Match(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMatcher([]string{tt.args.reg}, WithDelimiter(tt.args.spl))
+			m := NewMatch([]string{tt.args.reg}, WithDelimiter(tt.args.spl))
 			match, pattern := m.Match(tt.args.path)
 			if tt.want.match != match {
 				t.Errorf("name:%s,expectMatch:%v,actual:%v,pattern:%s,path:%s", tt.name, tt.want.match, match, pattern, tt.args.path)

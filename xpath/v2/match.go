@@ -20,8 +20,8 @@ func (p StrPattern) Pattern() string {
 	return string(p)
 }
 
-// Matcher 基于前缀树的匹配器
-type Matcher struct {
+// Match 基于前缀树的匹配器
+type Match struct {
 	patterns  []xpath.Pattern
 	Delimiter string
 	mutex     sync.Mutex
@@ -49,7 +49,7 @@ func (w *matchCacheWrap) SetIfAbsent(key string, val xpath.Pattern) bool {
 }
 
 // NewMatcher 创建一个新的匹配器
-func NewMatcher(pathList []string, opts ...Option) *Matcher {
+func NewMatch(pathList []string, opts ...Option) *Match {
 	patterns := make([]xpath.Pattern, len(pathList))
 	for i := range pathList {
 		patterns[i] = xpath.StrPattern(pathList[i])
@@ -58,8 +58,8 @@ func NewMatcher(pathList []string, opts ...Option) *Matcher {
 }
 
 // NewMatcherPatterns 使用Pattern切片创建匹配器
-func NewMatcherPatterns(pathList []xpath.Pattern, opts ...Option) *Matcher {
-	m := &Matcher{
+func NewMatcherPatterns(pathList []xpath.Pattern, opts ...Option) *Match {
+	m := &Match{
 		patterns:  pathList,
 		Delimiter: "/",
 		cache: &matchCacheWrap{
@@ -75,7 +75,7 @@ func NewMatcherPatterns(pathList []xpath.Pattern, opts ...Option) *Matcher {
 }
 
 // Match 尝试匹配给定的路径
-func (m *Matcher) Match(path string) (match bool, pattern xpath.Pattern) {
+func (m *Match) Match(path string) (match bool, pattern xpath.Pattern) {
 	sep := m.Delimiter
 	cacheKey := ""
 	if m.CanUseCache() {
@@ -213,10 +213,10 @@ func simpleMatch(text, pattern string) bool {
 	return true
 }
 
-func (m *Matcher) CanUseCache() bool {
+func (m *Match) CanUseCache() bool {
 	return m.cache.enable
 }
 
-func (m *Matcher) buildCacheKey(path, sep string) string {
+func (m *Match) buildCacheKey(path, sep string) string {
 	return sep + ":" + path
 }

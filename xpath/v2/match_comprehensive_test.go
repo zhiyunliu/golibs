@@ -8,13 +8,13 @@ import (
 
 func TestMatcherMatch_Comprehensive(t *testing.T) {
 	tests := []struct {
-		name            string
-		patterns        []string
-		path            string
-		opts            []Option
-		expectMatch     bool
-		expectPattern   string
-		note            string // 用于解释特殊情况
+		name          string
+		patterns      []string
+		path          string
+		opts          []Option
+		expectMatch   bool
+		expectPattern string
+		note          string // 用于解释特殊情况
 	}{
 		{
 			name:          "exact match",
@@ -116,7 +116,7 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 			patterns:      []string{"", "/api/users"},
 			path:          "",
 			expectMatch:   true,
-			expectPattern: "", 
+			expectPattern: "",
 		},
 		{
 			name:          "path and pattern both without leading delimiter",
@@ -145,9 +145,9 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matcher := NewMatcher(tt.patterns, tt.opts...)
+			matcher := NewMatch(tt.patterns, tt.opts...)
 			match, pattern := matcher.Match(tt.path)
-			
+
 			assert.Equal(t, tt.expectMatch, match, "Match result should match expected")
 			if tt.expectPattern != "" {
 				assert.Equal(t, tt.expectPattern, pattern.Pattern(), "Pattern should match expected")
@@ -165,18 +165,18 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 
 func TestMatcherMatch_CacheBehavior(t *testing.T) {
 	patterns := []string{"/api/users", "/static/**"}
-	matcher := NewMatcher(patterns, WithCache(true))
-	
+	matcher := NewMatch(patterns, WithCache(true))
+
 	// First call should not use cache
 	match, pattern := matcher.Match("/api/users")
 	assert.True(t, match)
 	assert.Equal(t, "/api/users", pattern.Pattern())
-	
+
 	// Second call should potentially use cache (internal behavior)
 	match, pattern = matcher.Match("/api/users")
 	assert.True(t, match)
 	assert.Equal(t, "/api/users", pattern.Pattern())
-	
+
 	// Test non-matching path
 	match, pattern = matcher.Match("/api/orders")
 	assert.False(t, match)
@@ -242,7 +242,7 @@ func TestMatcherMatch_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matcher := NewMatcher(tt.patterns)
+			matcher := NewMatch(tt.patterns)
 			match, _ := matcher.Match(tt.path)
 			assert.Equal(t, tt.expected, match, "Match result should match expected")
 		})
@@ -252,30 +252,30 @@ func TestMatcherMatch_EdgeCases(t *testing.T) {
 // TestMatcherMatch_CodePaths tests specific code paths in the Match function
 func TestMatcherMatch_CodePaths(t *testing.T) {
 	t.Run("cache path enabled", func(t *testing.T) {
-		matcher := NewMatcher([]string{"/api/users"}, WithCache(true))
-		
+		matcher := NewMatch([]string{"/api/users"}, WithCache(true))
+
 		// First call - not in cache
 		match, pattern := matcher.Match("/api/users")
 		assert.True(t, match)
 		assert.Equal(t, "/api/users", pattern.Pattern())
-		
+
 		// Second call - potentially from cache
 		match, pattern = matcher.Match("/api/users")
 		assert.True(t, match)
 		assert.Equal(t, "/api/users", pattern.Pattern())
 	})
-	
+
 	t.Run("cache path disabled", func(t *testing.T) {
-		matcher := NewMatcher([]string{"/api/users"}) // no WithCache option = cache disabled
-		
+		matcher := NewMatch([]string{"/api/users"}) // no WithCache option = cache disabled
+
 		match, pattern := matcher.Match("/api/users")
 		assert.True(t, match)
 		assert.Equal(t, "/api/users", pattern.Pattern())
 	})
-	
+
 	t.Run("no match case", func(t *testing.T) {
-		matcher := NewMatcher([]string{"/api/users", "/api/orders"})
-		
+		matcher := NewMatch([]string{"/api/users", "/api/orders"})
+
 		match, pattern := matcher.Match("/api/products")
 		assert.False(t, match)
 		assert.Nil(t, pattern)

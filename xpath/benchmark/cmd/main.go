@@ -20,7 +20,7 @@ func PerformanceComparison() {
 
 	// 创建 v1 和 v2 的匹配器
 	v1Matcher := xpath.NewMatch(patterns)
-	v2Matcher := xpathv2.NewMatcher(patterns)
+	v2Matcher := xpathv2.NewMatch(patterns)
 
 	// 测试 V1 性能
 	start := time.Now()

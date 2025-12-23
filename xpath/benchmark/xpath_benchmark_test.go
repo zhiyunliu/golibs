@@ -11,7 +11,7 @@ import (
 // BenchmarkV1SimplePath xpath v1 简单路径匹配
 func BenchmarkV1SimplePath(b *testing.B) {
 	m := xpath.NewMatch([]string{"/api/users", "/api/products", "/static/**"})
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/users")
@@ -20,8 +20,8 @@ func BenchmarkV1SimplePath(b *testing.B) {
 
 // BenchmarkV2SimplePath xpath v2 简单路径匹配
 func BenchmarkV2SimplePath(b *testing.B) {
-	m := xpathv2.NewMatcher([]string{"/api/users", "/api/products", "/static/**"})
-	
+	m := xpathv2.NewMatch([]string{"/api/users", "/api/products", "/static/**"})
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/users")
@@ -31,7 +31,7 @@ func BenchmarkV2SimplePath(b *testing.B) {
 // BenchmarkV1WildcardPath xpath v1 通配符路径匹配
 func BenchmarkV1WildcardPath(b *testing.B) {
 	m := xpath.NewMatch([]string{"/api/users/*", "/api/products/**", "/static/**"})
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/users/123")
@@ -40,8 +40,8 @@ func BenchmarkV1WildcardPath(b *testing.B) {
 
 // BenchmarkV2WildcardPath xpath v2 通配符路径匹配
 func BenchmarkV2WildcardPath(b *testing.B) {
-	m := xpathv2.NewMatcher([]string{"/api/users/*", "/api/products/**", "/static/**"})
-	
+	m := xpathv2.NewMatch([]string{"/api/users/*", "/api/products/**", "/static/**"})
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/users/123")
@@ -51,7 +51,7 @@ func BenchmarkV2WildcardPath(b *testing.B) {
 // BenchmarkV1DeepWildcardPath xpath v1 深层通配符路径匹配
 func BenchmarkV1DeepWildcardPath(b *testing.B) {
 	m := xpath.NewMatch([]string{"/api/users/*", "/api/products/**", "/static/**"})
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/products/category/electronics/item/123")
@@ -60,8 +60,8 @@ func BenchmarkV1DeepWildcardPath(b *testing.B) {
 
 // BenchmarkV2DeepWildcardPath xpath v2 深层通配符路径匹配
 func BenchmarkV2DeepWildcardPath(b *testing.B) {
-	m := xpathv2.NewMatcher([]string{"/api/users/*", "/api/products/**", "/static/**"})
-	
+	m := xpathv2.NewMatch([]string{"/api/users/*", "/api/products/**", "/static/**"})
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/products/category/electronics/item/123")
@@ -71,7 +71,7 @@ func BenchmarkV2DeepWildcardPath(b *testing.B) {
 // BenchmarkV1MultipleWildcards xpath v1 多通配符匹配
 func BenchmarkV1MultipleWildcards(b *testing.B) {
 	m := xpath.NewMatch([]string{"/api/**/users/*", "/api/**/products/**", "/static/**"})
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/v1/users/profile")
@@ -80,8 +80,8 @@ func BenchmarkV1MultipleWildcards(b *testing.B) {
 
 // BenchmarkV2MultipleWildcards xpath v2 多通配符匹配
 func BenchmarkV2MultipleWildcards(b *testing.B) {
-	m := xpathv2.NewMatcher([]string{"/api/**/users/*", "/api/**/products/**", "/static/**"})
-	
+	m := xpathv2.NewMatch([]string{"/api/**/users/*", "/api/**/products/**", "/static/**"})
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.Match("/api/v1/users/profile")
@@ -96,7 +96,7 @@ func PerformanceComparison() {
 
 	// 创建 v1 和 v2 的匹配器
 	v1Matcher := xpath.NewMatch(patterns)
-	v2Matcher := xpathv2.NewMatcher(patterns)
+	v2Matcher := xpathv2.NewMatch(patterns)
 
 	// 测试 V1 性能
 	start := time.Now()

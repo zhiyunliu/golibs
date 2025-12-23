@@ -32,9 +32,9 @@ func getMemStats() MemStats {
 // BenchmarkV1MemoryUsage 测试xpath v1内存使用情况
 func BenchmarkV1MemoryUsage(b *testing.B) {
 	var m1, m2 MemStats
-	
+
 	m1 = getMemStats()
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// 创建Matcher实例
@@ -48,17 +48,17 @@ func BenchmarkV1MemoryUsage(b *testing.B) {
 			"/files/*/upload",
 			"/data/**/export",
 		})
-		
+
 		// 执行一些匹配操作
 		_, _ = matcher.Match("/api/users/123")
 		_, _ = matcher.Match("/api/products/electronics/phone")
 		_, _ = matcher.Match("/static/css/style.css")
 		_, _ = matcher.Match("/api/v1/users/profile")
 	}
-	
+
 	b.StopTimer()
 	m2 = getMemStats()
-	
+
 	b.ReportMetric(float64(m2.Alloc-m1.Alloc)/float64(b.N), "B/op")
 	b.ReportMetric(float64(m2.NumGC-m1.NumGC)/float64(b.N), "GC/op")
 }
@@ -66,13 +66,13 @@ func BenchmarkV1MemoryUsage(b *testing.B) {
 // BenchmarkV2MemoryUsage 测试xpath v2内存使用情况
 func BenchmarkV2MemoryUsage(b *testing.B) {
 	var m1, m2 MemStats
-	
+
 	m1 = getMemStats()
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// 创建Matcher实例
-		matcher := xpathv2.NewMatcher([]string{
+		matcher := xpathv2.NewMatch([]string{
 			"/api/users/*",
 			"/api/products/**",
 			"/static/**",
@@ -82,17 +82,17 @@ func BenchmarkV2MemoryUsage(b *testing.B) {
 			"/files/*/upload",
 			"/data/**/export",
 		})
-		
+
 		// 执行一些匹配操作
 		_, _ = matcher.Match("/api/users/123")
 		_, _ = matcher.Match("/api/products/electronics/phone")
 		_, _ = matcher.Match("/static/css/style.css")
 		_, _ = matcher.Match("/api/v1/users/profile")
 	}
-	
+
 	b.StopTimer()
 	m2 = getMemStats()
-	
+
 	b.ReportMetric(float64(m2.Alloc-m1.Alloc)/float64(b.N), "B/op")
 	b.ReportMetric(float64(m2.NumGC-m1.NumGC)/float64(b.N), "GC/op")
 }
@@ -106,13 +106,13 @@ func BenchmarkV1MemoryUsageWithCache(b *testing.B) {
 // BenchmarkV2MemoryUsageWithCache 测试xpath v2带缓存的内存使用情况
 func BenchmarkV2MemoryUsageWithCache(b *testing.B) {
 	var m1, m2 MemStats
-	
+
 	m1 = getMemStats()
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// 创建Matcher实例，启用缓存
-		matcher := xpathv2.NewMatcher([]string{
+		matcher := xpathv2.NewMatch([]string{
 			"/api/users/*",
 			"/api/products/**",
 			"/static/**",
@@ -122,17 +122,17 @@ func BenchmarkV2MemoryUsageWithCache(b *testing.B) {
 			"/files/*/upload",
 			"/data/**/export",
 		}, xpathv2.WithCache(true))
-		
+
 		// 执行一些匹配操作
 		_, _ = matcher.Match("/api/users/123")
 		_, _ = matcher.Match("/api/products/electronics/phone")
 		_, _ = matcher.Match("/static/css/style.css")
 		_, _ = matcher.Match("/api/v1/users/profile")
 	}
-	
+
 	b.StopTimer()
 	m2 = getMemStats()
-	
+
 	b.ReportMetric(float64(m2.Alloc-m1.Alloc)/float64(b.N), "B/op")
 	b.ReportMetric(float64(m2.NumGC-m1.NumGC)/float64(b.N), "GC/op")
 }
