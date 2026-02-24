@@ -3,8 +3,8 @@ module github.com/zhiyunliu/golibs
 go 1.24.0
 
 require (
-	github.com/rs/zerolog v0.0.0-00010101000000-000000000000
 	github.com/zhiyunliu/stack v1.10.1
+	github.com/zhiyunliu/zerolog v1.1.0
 )
 
 require (
@@ -25,5 +25,3 @@ require (
 	golang.org/x/sync v0.16.0
 	golang.org/x/text v0.28.0
 )
-
-replace github.com/rs/zerolog => github.com/zhiyunliu/zerolog v1.0.1

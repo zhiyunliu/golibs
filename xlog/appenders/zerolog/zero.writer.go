@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/zhiyunliu/golibs/xfile"
 	"github.com/zhiyunliu/golibs/xlog"
+	"github.com/zhiyunliu/zerolog"
 )
 
 var _ xlog.EventWriter = &zeroWriter{}
@@ -86,6 +86,22 @@ func (f *zeroWriter) Write(event *xlog.Event) error {
 	if event.Level == xlog.LevelPanic {
 		zevt.ResetDone(nil)
 	}
+
+	if len(event.Tags) > 0 {
+		if cip, ok := event.Tags["cip"]; ok && cip != "" {
+			zevt.Str("cip", cip)
+		}
+		if uid, ok := event.Tags["uid"]; ok && uid != "" {
+			zevt.Str("uid", uid)
+		}
+		if span_id, ok := event.Tags["span_id"]; ok && span_id != "" {
+			zevt.Str("span_id", span_id)
+		}
+		if trace_id, ok := event.Tags["trace_id"]; ok && trace_id != "" {
+			zevt.Str("trace_id", trace_id)
+		}
+	}
+
 	zevt.Time("time", event.LogTime).
 		Str("sid", event.Session).
 		Int32("seq", event.Idx).
