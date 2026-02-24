@@ -39,7 +39,13 @@ func (m SMap) Get(name string) string {
 	return ""
 }
 
+// Deprecated
 func (m SMap) GetWithDefault(name string, def string) string {
+	return m.GetOrDefault(name, def)
+}
+
+// GetOrDefault gets value from SMap with a default value if the key doesn't exist
+func (m SMap) GetOrDefault(name string, def string) string {
 	if v, ok := m[name]; ok {
 		return v
 	}
@@ -59,7 +65,7 @@ func (m SMap) Values() map[string]string {
 }
 
 func (m SMap) Translate(tpl string) string {
-	return xtransform.TranslateMap(tpl, m)
+	return xtransform.TranslateMap(tpl, m, xtransform.WithAtBraceMode(), xtransform.WithAtMode())
 }
 
 func (m SMap) MarshalBinary() (data []byte, err error) {
@@ -67,7 +73,7 @@ func (m SMap) MarshalBinary() (data []byte, err error) {
 	return json.Marshal(tmp)
 }
 
-func (m *SMap) MapScan(obj interface{}) error {
+func (m *SMap) MapScan(obj any) error {
 	return mapscan(obj, m)
 }
 

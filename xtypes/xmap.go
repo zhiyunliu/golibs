@@ -30,13 +30,21 @@ func (m XMap) Merge(r XMap) {
 }
 
 // Get 获取指定元素的值
-func (m XMap) Get(name string) (interface{}, bool) {
+func (m XMap) Get(name string) (any, bool) {
 	v, ok := m[name]
 	return v, ok
 }
 
+// GetOrDefault gets value from SMap with a default value if the key doesn't exist
+func (m XMap) GetOrDefault(name string, def any) any {
+	if v, ok := m[name]; ok {
+		return v
+	}
+	return def
+}
+
 // ScanTo 以json 标签进行序列化
-func (m XMap) ScanTo(obj interface{}) error {
+func (m XMap) ScanTo(obj any) error {
 	bytes, _ := json.Marshal(m)
 	return json.Unmarshal(bytes, obj)
 }
@@ -58,7 +66,7 @@ func (m XMap) SMap() SMap {
 }
 
 func (m XMap) Translate(tpl string) string {
-	return xtransform.Translate(tpl, m)
+	return xtransform.Translate(tpl, m, xtransform.WithAtBraceMode(), xtransform.WithAtMode())
 }
 
 func (m XMap) MarshalBinary() (data []byte, err error) {
