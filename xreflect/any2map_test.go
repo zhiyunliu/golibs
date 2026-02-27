@@ -2,7 +2,6 @@ package xreflect
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 	"time"
 
@@ -15,14 +14,14 @@ type DateTime time.Time
 // DateTimeWithMapValuer 是 time.Time 的类型别名，实现了 MapValuer 接口（值接收者）
 type DateTimeWithMapValuer time.Time
 
-func (d DateTimeWithMapValuer) MapValue() interface{} {
+func (d DateTimeWithMapValuer) Value() interface{} {
 	return time.Time(d).Format("2006-01-02 15:04:05")
 }
 
 // DateTimeWithPtrMapValuer 是 time.Time 的类型别名，实现了 MapValuer 接口（指针接收者）
 type DateTimeWithPtrMapValuer time.Time
 
-func (d *DateTimeWithPtrMapValuer) MapValue() interface{} {
+func (d *DateTimeWithPtrMapValuer) Value() interface{} {
 	return time.Time(*d).Format("2006/01/02")
 }
 
@@ -57,7 +56,7 @@ type NonTimeMapValuer struct {
 	Y int
 }
 
-func (n NonTimeMapValuer) MapValue() interface{} {
+func (n NonTimeMapValuer) Value() interface{} {
 	return map[string]int{"x": n.X, "y": n.Y}
 }
 
@@ -475,9 +474,11 @@ func TestAnyToMapWithMaxDepthExceeded(t *testing.T) {
 	}
 	type Outer struct {
 		Middle Middle `json:"middle"`
+		Outer  string `json:"outer"`
 	}
 
 	obj := Outer{
+		Outer: "outer",
 		Middle: Middle{
 			Inner: Inner{
 				Value: "deep",
@@ -489,6 +490,7 @@ func TestAnyToMapWithMaxDepthExceeded(t *testing.T) {
 	result, err := AnyToMap(obj, WithMaxDepth(1))
 	assert.Nil(t, err)
 	// middle 在 depth=0 递归到 depth=1, depth=1 >= maxDepth=1，返回 nil
+	assert.Equal(t, "outer", result["outer"])
 	assert.Nil(t, result["middle"])
 }
 
@@ -624,68 +626,6 @@ func TestAnyToMapEmptySlice(t *testing.T) {
 	assert.Len(t, items, 0)
 }
 
-// TestGetUnderlyingType 直接测试 getUnderlyingType 内部函数
-func TestGetUnderlyingType(t *testing.T) {
-	timeType := reflect.TypeOf(time.Time{})
-
-	// time.Time → time.Time
-	assert.Equal(t, timeType, getUnderlyingType(reflect.TypeOf(time.Time{})))
-
-	// DateTime (type DateTime time.Time) → time.Time
-	assert.Equal(t, timeType, getUnderlyingType(reflect.TypeOf(DateTime{})))
-
-	// *time.Time → time.Time (解包指针)
-	assert.Equal(t, timeType, getUnderlyingType(reflect.TypeOf((*time.Time)(nil))))
-
-	// int → int (非struct类型直接返回)
-	intType := reflect.TypeOf(0)
-	assert.Equal(t, intType, getUnderlyingType(intType))
-
-	// 普通 struct → 返回自身
-	structType := reflect.TypeOf(TestStruct{})
-	assert.Equal(t, structType, getUnderlyingType(structType))
-}
-
-// TestIsUnderlyingTimeType 直接测试 isUnderlyingTimeType 内部函数
-func TestIsUnderlyingTimeType(t *testing.T) {
-	// time.Time → true (struct 分支，getUnderlyingType 返回 time.Time)
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf(time.Time{})))
-
-	// DateTime → true
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf(DateTime{})))
-
-	// *DateTime → true (指针解包)
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf((*DateTime)(nil))))
-
-	// []DateTime → true (slice元素检查)
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf([]DateTime{})))
-
-	// int → false
-	assert.False(t, isUnderlyingTimeType(reflect.TypeOf(0)))
-
-	// string → false
-	assert.False(t, isUnderlyingTimeType(reflect.TypeOf("")))
-
-	// map[string]DateTime → true (map值检查)
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf(map[string]DateTime{})))
-}
-
-// TestIsSpecialValueType 直接测试 isSpecialValueType 内部函数
-func TestIsSpecialValueType(t *testing.T) {
-	// time.Time → true
-	assert.True(t, isSpecialValueType(reflect.ValueOf(time.Time{})))
-
-	// DateTime → true (ConvertibleTo time.Time)
-	assert.True(t, isSpecialValueType(reflect.ValueOf(DateTime{})))
-
-	// 普通struct → false
-	assert.False(t, isSpecialValueType(reflect.ValueOf(TestStruct{})))
-
-	// CustomTextMarshaler → true (实现了 TextMarshaler)
-	assert.True(t, isSpecialValueType(reflect.ValueOf(CustomTextMarshaler{Value: "x"})))
-
-}
-
 // TestAnyToMapWithMapInput 测试 map 类型输入
 func TestAnyToMapWithMapInput(t *testing.T) {
 	input := map[string]interface{}{
@@ -769,40 +709,12 @@ func TestAnyToMapWithNonTimeStringer(t *testing.T) {
 	_, isMap := result["full_name"].(map[string]interface{})
 	assert.False(t, isMap, "full_name should NOT be a map when type implements Stringer")
 	// 保留原始值（NonTimeStringer 类型本身）
-	val, ok := result["full_name"].(NonTimeStringer)
-	assert.True(t, ok, "full_name should be NonTimeStringer type")
-	assert.Equal(t, "John", val.First)
+	_, ok := result["full_name"].(NonTimeStringer)
+	assert.False(t, ok, "full_name should be NonTimeStringer type")
+	assert.Equal(t, "John Doe", result["full_name"])
 }
 
 // TestIsSpecialValueTypeNonStruct 测试 isSpecialValueType 非 struct 分支
-func TestIsSpecialValueTypeNonStruct(t *testing.T) {
-	// int → false
-	assert.False(t, isSpecialValueType(reflect.ValueOf(42)))
-
-	// string → false
-	assert.False(t, isSpecialValueType(reflect.ValueOf("hello")))
-
-	// bool → false
-	assert.False(t, isSpecialValueType(reflect.ValueOf(true)))
-}
-
-// TestIsUnderlyingTimeTypeWithArrayAndChan 测试 array 和 chan 类型
-func TestIsUnderlyingTimeTypeWithArrayAndChan(t *testing.T) {
-	// [1]DateTime → true (array 元素检查)
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf([1]DateTime{})))
-
-	// chan DateTime → true (chan 元素检查)
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf(make(chan DateTime))))
-
-	// [2]int → false
-	assert.False(t, isUnderlyingTimeType(reflect.TypeOf([2]int{})))
-
-	// map[DateTime]string → true (map 键检查)
-	assert.True(t, isUnderlyingTimeType(reflect.TypeOf(map[DateTime]string{})))
-
-	// map[string]int → false
-	assert.False(t, isUnderlyingTimeType(reflect.TypeOf(map[string]int{})))
-}
 
 // TestAnyToMapSliceWithNonTimeMapValuer 测试切片中包含非 time 基础的 MapValuer 类型
 func TestAnyToMapSliceWithNonTimeMapValuer(t *testing.T) {

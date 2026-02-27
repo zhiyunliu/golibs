@@ -2,6 +2,7 @@ package xreflect
 
 import (
 	"database/sql/driver"
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -22,9 +23,9 @@ func typeEncoder(t reflect.Type) encoderFunc {
 		f  encoderFunc
 	)
 	wg.Add(1)
-	fi, loaded := encoderCache.LoadOrStore(t, encoderFunc(func(v reflect.Value) any {
+	fi, loaded := encoderCache.LoadOrStore(t, encoderFunc(func(v reflect.Value, opts structOptions) any {
 		wg.Wait()
-		return f(v)
+		return f(v, opts)
 	}))
 	if loaded {
 		return fi.(encoderFunc)
@@ -70,11 +71,11 @@ func newTypeEncoder(t reflect.Type) encoderFunc {
 	}
 }
 
-func unsupportedTypeEncoder(v reflect.Value) any {
+func unsupportedTypeEncoder(v reflect.Value, _ structOptions) any {
 	return nil
 }
 
-func boolEncoder(v reflect.Value) any {
+func boolEncoder(v reflect.Value, _ structOptions) any {
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
@@ -85,36 +86,36 @@ func boolEncoder(v reflect.Value) any {
 	return v.Bool()
 }
 
-func intEncoder(v reflect.Value) any {
+func intEncoder(v reflect.Value, _ structOptions) any {
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
 		v = v.Elem()
 	}
-	return v.Int()
+	return v.Interface()
 }
 
-func uintEncoder(v reflect.Value) any {
+func uintEncoder(v reflect.Value, _ structOptions) any {
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
 		v = v.Elem()
 	}
-	return v.Uint()
+	return v.Interface()
 }
 
 type floatEncoder int // number of bits
 
-func (bits floatEncoder) encode(v reflect.Value) any {
+func (bits floatEncoder) encode(v reflect.Value, _ structOptions) any {
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
 		v = v.Elem()
 	}
-	return v.Float()
+	return v.Interface()
 }
 
 var (
@@ -122,7 +123,7 @@ var (
 	float64Encoder = (floatEncoder(64)).encode
 )
 
-func stringEncoder(v reflect.Value) any {
+func stringEncoder(v reflect.Value, _ structOptions) any {
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
@@ -132,7 +133,7 @@ func stringEncoder(v reflect.Value) any {
 	return v.String()
 }
 
-func interfaceEncoder(v reflect.Value) any {
+func interfaceEncoder(v reflect.Value, _ structOptions) any {
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
@@ -146,7 +147,7 @@ type structEncoder struct {
 	fields *StructFields
 }
 
-func (se structEncoder) encode(v reflect.Value) any {
+func (se structEncoder) encode(v reflect.Value, opts structOptions) any {
 	rft := v.Type()
 
 	tmpv := v
@@ -157,20 +158,68 @@ func (se structEncoder) encode(v reflect.Value) any {
 		tmpv = tmpv.Elem()
 	}
 
+	if rft.Implements(structValuerType) {
+		return v.Interface().(StructValuer).Value()
+	}
+
+	if v.CanAddr() && v.Addr().Type().Implements(structValuerType) {
+		return v.Addr().Interface().(StructValuer).Value()
+	}
+
+	// 检查是否是 time.Time 类型或可以转换为 time.Time 的类型别名
+	if rft == timeType || rft.ConvertibleTo(timeType) {
+		return v.Interface()
+	}
+
 	if rft.Implements(stringerType) {
 		return v.Interface().(fmt.Stringer).String()
 	}
+
+	if v.CanAddr() && v.Addr().Type().Implements(stringerType) {
+		return v.Addr().Interface().(fmt.Stringer).String()
+	}
+
 	if rft.Implements(driverValuerType) {
 		tmpVal, _ := v.Interface().(driver.Valuer).Value()
 		return tmpVal
 	}
 
-	if rft.Implements(jsonMarshalerType) {
-		tmpVal, _ := v.Interface().(json.Marshaler).MarshalJSON()
+	if v.CanAddr() && v.Addr().Type().Implements(driverValuerType) {
+		tmpVal, _ := v.Addr().Interface().(driver.Valuer).Value()
 		return tmpVal
 	}
 
-	return unsupportedTypeEncoder(v)
+	if !opts.disableJSONMarshaler {
+		if rft.Implements(jsonMarshalerType) {
+			tmpVal, _ := v.Interface().(json.Marshaler).MarshalJSON()
+			return tmpVal
+		}
+
+		if v.CanAddr() && v.Addr().Type().Implements(jsonMarshalerType) {
+			tmpVal, _ := v.Addr().Interface().(json.Marshaler).MarshalJSON()
+			return tmpVal
+		}
+	}
+	if rft.Implements(textMarshalerType) {
+		tmpVal, _ := v.Interface().(encoding.TextMarshaler).MarshalText()
+		return tmpVal
+	}
+
+	if v.CanAddr() && v.Addr().Type().Implements(textMarshalerType) {
+		tmpVal, _ := v.Addr().Interface().(encoding.TextMarshaler).MarshalText()
+		return tmpVal
+	}
+
+	if opts.structField && opts.IsValidDepth() {
+		params := make(map[string]any)
+		for _, f := range se.fields.ExactName {
+			if val, ok := f.Encoder(v, opts); ok {
+				params[f.Name] = val
+			}
+		}
+		return params
+	}
+	return unsupportedTypeEncoder(v, opts)
 }
 
 func newStructEncoder(t reflect.Type) encoderFunc {
@@ -182,7 +231,7 @@ type mapEncoder struct {
 	elemEnc encoderFunc
 }
 
-func (me mapEncoder) encode(v reflect.Value) any {
+func (me mapEncoder) encode(v reflect.Value, opts structOptions) any {
 	rft := v.Type()
 
 	if rft.Implements(stringerType) {
@@ -199,7 +248,7 @@ func (me mapEncoder) encode(v reflect.Value) any {
 		return tmpVal
 	}
 
-	return unsupportedTypeEncoder(v)
+	return unsupportedTypeEncoder(v, opts)
 }
 
 func newMapEncoder(t reflect.Type) encoderFunc {
@@ -216,7 +265,7 @@ func newMapEncoder(t reflect.Type) encoderFunc {
 	return me.encode
 }
 
-func encodeByteSlice(v reflect.Value) any {
+func encodeByteSlice(v reflect.Value, opts structOptions) any {
 	return v.Bytes()
 }
 
@@ -225,8 +274,8 @@ type sliceEncoder struct {
 	arrayEnc encoderFunc
 }
 
-func (se sliceEncoder) encode(v reflect.Value) any {
-	return se.arrayEnc(v)
+func (se sliceEncoder) encode(v reflect.Value, opts structOptions) any {
+	return se.arrayEnc(v, opts)
 }
 
 func newSliceEncoder(t reflect.Type) encoderFunc {
@@ -245,9 +294,18 @@ type arrayEncoder struct {
 	elemEnc encoderFunc
 }
 
-func (ae arrayEncoder) encode(v reflect.Value) any {
+func (ae arrayEncoder) encode(v reflect.Value, opts structOptions) any {
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
+	}
+
+	if opts.sliceItem {
+		arrLen := v.Len()
+		arrVal := make([]any, arrLen)
+		for i := 0; i < arrLen; i++ {
+			arrVal[i] = ae.elemEnc(v.Index(i), opts)
+		}
+		return arrVal
 	}
 	return v.Interface()
 }
@@ -261,14 +319,14 @@ type ptrEncoder struct {
 	elemEnc encoderFunc
 }
 
-func (pe ptrEncoder) encode(v reflect.Value) any {
+func (pe ptrEncoder) encode(v reflect.Value, opts structOptions) any {
 	if v.IsNil() {
 		return nil
 	}
-	return pe.elemEnc(v.Elem())
+	return pe.elemEnc(v.Elem(), opts)
 }
 
 func newPtrEncoder(t reflect.Type) encoderFunc {
-	enc := ptrEncoder{typeEncoder(t.Elem())}
+	enc := ptrEncoder{elemEnc: typeEncoder(t.Elem())}
 	return enc.encode
 }

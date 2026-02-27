@@ -3,17 +3,22 @@ package xreflect
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
 	"sync"
+	"time"
 )
 
 var (
 	fieldCache        sync.Map
 	encoderCache      sync.Map
 	dencoderCache     sync.Map
+	textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	structValuerType  = reflect.TypeOf((*StructValuer)(nil)).Elem()
+	timeType          = reflect.TypeOf(time.Time{})
 	stringerType      = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
 	driverValuerType  = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
 	jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
@@ -21,7 +26,11 @@ var (
 	mapScannerType    = reflect.TypeOf((*MapScanner)(nil)).Elem()
 )
 
-type encoderFunc func(v reflect.Value) any
+type StructValuer interface {
+	Value() any
+}
+
+type encoderFunc func(v reflect.Value, opts structOptions) any
 type dencoderFunc func(reflect.Value, any) error
 
 func CachedTypeFields(t reflect.Type) *StructFields {

@@ -61,9 +61,47 @@ func teststructEncoder(input any) (params map[string]any, err error) {
 	fields := CachedTypeFields(refval.Type())
 
 	for _, f := range fields.ExactName {
-		if val, _, ok := f.EncoderV2(refval); ok {
+		if val, _, ok := f.EncoderV2(refval, structOptions{maxDepth: 1}); ok {
 			params[f.Name] = val
 		}
 	}
 	return
+}
+
+func Test_structEncoder_Anonymous(t *testing.T) {
+	type Anonymous struct {
+		Field1 string `json:"field1"`
+		Field2 int    `json:"field2"`
+	}
+	type Test struct {
+		Anonymous
+		Field3 string `json:"field3"`
+	}
+
+	paraTtest := Test{
+		Anonymous: Anonymous{Field1: "field1", Field2: 2},
+		Field3:    "field3",
+	}
+
+	tests := []struct {
+		name  string
+		input any
+		want  any
+	}{
+		{name: "1", input: paraTtest, want: map[string]any{"field1": "field1", "field2": (2), "field3": "field3"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			gotParam, err := teststructEncoder(tt.input)
+			if err != nil {
+				t.Errorf("testxx() error = %v", err)
+				return
+			}
+			if !reflect.DeepEqual(gotParam, tt.want) {
+				t.Errorf("testxx() = %v, want %v", gotParam, tt.want)
+			}
+
+		})
+	}
 }
