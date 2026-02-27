@@ -30,7 +30,7 @@ type StructValuer interface {
 	Value() any
 }
 
-type encoderFunc func(v reflect.Value, opts structOptions) any
+type encoderFunc func(v reflect.Value, opts StructOptions) any
 type dencoderFunc func(reflect.Value, any) error
 
 func CachedTypeFields(t reflect.Type) *StructFields {

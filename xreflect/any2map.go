@@ -10,50 +10,54 @@ import (
 // 例如，对于 type DateTime time.Time 这样的类型定义，
 // 可以通过实现 MapValuer 接口来控制其在map转换时的值表示。
 
-type StructOption func(*structOptions)
-type structOptions struct {
+type StructOption func(*StructOptions)
+type StructOptions struct {
 	curDepth             int
-	maxDepth             int
-	structField          bool
-	sliceItem            bool
-	disableJSONMarshaler bool
+	MaxDepth             int
+	StructField          bool
+	SliceItem            bool
+	DisableJSONMarshaler bool
 }
 
-func (o structOptions) IsValidDepth() bool {
-	return o.curDepth < o.maxDepth
+// IsValidDepth 检查当前深度是否小于最大深度，以防止过深的递归导致性能问题或栈溢出。
+func (o StructOptions) IsValidDepth(step ...int) bool {
+	if len(step) > 0 {
+		return o.curDepth+step[0] <= o.MaxDepth
+	}
+	return o.curDepth <= o.MaxDepth
 }
 func WithMaxDepth(maxDepth int) StructOption {
-	return func(o *structOptions) {
-		o.maxDepth = maxDepth
+	return func(o *StructOptions) {
+		o.MaxDepth = maxDepth
 	}
 }
 
 func WithStructField(state bool) StructOption {
-	return func(o *structOptions) {
-		o.structField = state
+	return func(o *StructOptions) {
+		o.StructField = state
 	}
 }
 
 func WithSliceItem(state bool) StructOption {
-	return func(o *structOptions) {
-		o.sliceItem = state
+	return func(o *StructOptions) {
+		o.SliceItem = state
 	}
 }
 
 func WithDisableJSONMarshaler(state bool) StructOption {
-	return func(o *structOptions) {
-		o.disableJSONMarshaler = state
+	return func(o *StructOptions) {
+		o.DisableJSONMarshaler = state
 	}
 }
 
 // 将value 转换为map
 func AnyToMap(value interface{}, opts ...StructOption) (map[string]any, error) {
-	options := structOptions{
+	options := StructOptions{
 		curDepth:             0,
-		maxDepth:             10, // default max depth
-		sliceItem:            true,
-		structField:          true,
-		disableJSONMarshaler: true,
+		MaxDepth:             10, // default max depth
+		SliceItem:            true,
+		StructField:          true,
+		DisableJSONMarshaler: true,
 	}
 	for _, o := range opts {
 		o(&options)

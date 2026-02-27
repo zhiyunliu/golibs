@@ -61,7 +61,7 @@ func teststructEncoder(input any) (params map[string]any, err error) {
 	fields := CachedTypeFields(refval.Type())
 
 	for _, f := range fields.ExactName {
-		if val, _, ok := f.EncoderV2(refval, structOptions{maxDepth: 1}); ok {
+		if val, _, ok := f.EncoderV2(refval, StructOptions{MaxDepth: 1}); ok {
 			params[f.Name] = val
 		}
 	}

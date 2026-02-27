@@ -59,9 +59,9 @@ func (f *field) Dencoder(rv reflect.Value, val any) (err error) {
 	return
 }
 
-func (f *field) Encoder(rv reflect.Value, opts structOptions) (val any, ok bool) {
+func (f *field) Encoder(rv reflect.Value, opts StructOptions) (val any, ok bool) {
 	opts.curDepth++
-	if opts.curDepth > opts.maxDepth {
+	if !opts.IsValidDepth() {
 		return nil, false
 	}
 
@@ -72,9 +72,9 @@ func (f *field) Encoder(rv reflect.Value, opts structOptions) (val any, ok bool)
 	return f.encoderFunc(fv, opts), true
 }
 
-func (f *field) EncoderV2(rv reflect.Value, opts structOptions) (val any, fv reflect.Value, ok bool) {
+func (f *field) EncoderV2(rv reflect.Value, opts StructOptions) (val any, fv reflect.Value, ok bool) {
 	opts.curDepth++
-	if opts.curDepth > opts.maxDepth {
+	if !opts.IsValidDepth() {
 		return nil, reflect.Value{}, false
 	}
 	fv = GetRealReflectVal(f, rv) //rv.Field(f.Index)
