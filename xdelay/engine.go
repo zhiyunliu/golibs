@@ -18,18 +18,6 @@ type Engine struct {
 	onceLock sync.Once
 }
 
-// 执行的任务函数
-type TaskCallback func(args ...interface{})
-
-// 任务
-type dealyTask struct {
-	//循环次数
-	cycleCnt int
-	//执行的函数
-	callback TaskCallback
-	params   []interface{}
-}
-
 // 创建一个延迟消息
 func NewEngine(slotCount int) *Engine {
 	dm := &Engine{
@@ -93,6 +81,19 @@ func (e *Engine) AddTask(seconds uint, callback TaskCallback, params ...interfac
 		cycleCnt: int(seconds / uint(e.slotCount)),
 		callback: callback,
 		params:   params,
+	})
+	return nil
+}
+
+// 添加任务
+func (e *Engine) AddTaskInfo(seconds uint, task TaskInfo) error {
+	slotIdx := (e.curIndex + seconds) % uint(e.slotCount)
+	//把任务加入tasks中
+	e.slots[slotIdx].Append(&dealyTask{
+		cycleCnt: int(seconds / uint(e.slotCount)),
+		callback: task.GetCallback(),
+		params:   task.GetArgs(),
+		tag:      task.GetTag(),
 	})
 	return nil
 }

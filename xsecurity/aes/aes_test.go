@@ -17,7 +17,7 @@ func TestEncrypt(t *testing.T) {
 		wantCipherText string
 		wantErr        bool
 	}{
-		{name: "1.", args: args{plainText: "1234567890123456", key: "glue.xdb12345678", mode: "cbc/pkcs7"}, wantCipherText: "", wantErr: false},
+		{name: "1.", args: args{plainText: "1234567890123456", key: "glue.xdb12345678", mode: "cbc/pkcs7"}, wantCipherText: "xTumhr4RgvDUpUlpWq7WL9C7E9aeoF00PGgnqH6pxp0=", wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -46,7 +46,7 @@ func TestDecrypt(t *testing.T) {
 		wantPlainText string
 		wantErr       bool
 	}{
-		{name: "1.", args: args{cipherText: "xTumhr4RgvDUpUlpWq7WL9C7E9aeoF00PGgnqH6pxp0=", key: "glue.xdb12345678", mode: "cbc/pkcs7"}, wantPlainText: "1234567890123456x", wantErr: false},
+		{name: "1.", args: args{cipherText: "xTumhr4RgvDUpUlpWq7WL9C7E9aeoF00PGgnqH6pxp0=", key: "glue.xdb12345678", mode: "cbc/pkcs7"}, wantPlainText: "1234567890123456", wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

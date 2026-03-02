@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/zhiyunliu/stack v1.10.1
 	github.com/zhiyunliu/zerolog v1.1.0
+	go.mongodb.org/mongo-driver v1.17.9
 )
 
 require (
