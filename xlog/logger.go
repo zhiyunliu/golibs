@@ -8,8 +8,11 @@ type Logger interface {
 	SessionID() string
 	Log(level Level, args ...any)
 	Logf(level Level, format string, args ...any)
+	LogChain(level Level, msg string, opts ...EventOption)
 	Close()
 }
+
+type EventOption func(evt *Event)
 
 type EventWriter interface {
 	Write(evt *Event) error

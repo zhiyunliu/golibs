@@ -89,16 +89,10 @@ func (f *zeroWriter) Write(event *xlog.Event) error {
 
 	if len(event.Tags) > 0 {
 		if cip, ok := event.Tags["cip"]; ok && cip != "" {
-			zevt.Str("cip", cip)
+			zevt.Any("cip", cip)
 		}
 		if uid, ok := event.Tags["uid"]; ok && uid != "" {
-			zevt.Str("uid", uid)
-		}
-		if span_id, ok := event.Tags["span_id"]; ok && span_id != "" {
-			zevt.Str("span_id", span_id)
-		}
-		if trace_id, ok := event.Tags["trace_id"]; ok && trace_id != "" {
-			zevt.Str("trace_id", trace_id)
+			zevt.Any("uid", uid)
 		}
 	}
 
@@ -106,6 +100,12 @@ func (f *zeroWriter) Write(event *xlog.Event) error {
 		Str("sid", event.Session).
 		Int32("seq", event.Idx).
 		Msg(event.Content)
+
+	if len(event.Tags) > 0 {
+		for k, v := range event.Tags {
+			zevt.Any(k, v)
+		}
+	}
 
 	f.lastWrite = time.Now()
 	return nil

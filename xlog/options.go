@@ -7,7 +7,7 @@ type options struct {
 	sid     string
 	name    string
 	srvType string
-	data    map[string]string
+	data    map[string]any
 }
 
 func (o *options) reset() {
@@ -39,7 +39,7 @@ func WithSrvType(srvType string) Option {
 func WithField(k, v string) Option {
 	return func(o *options) {
 		if o.data == nil {
-			o.data = map[string]string{}
+			o.data = map[string]any{}
 		}
 		o.data[k] = v
 	}
@@ -48,7 +48,7 @@ func WithField(k, v string) Option {
 func WithFields(fileds map[string]string) Option {
 	return func(o *options) {
 		if o.data == nil {
-			o.data = map[string]string{}
+			o.data = map[string]any{}
 		}
 
 		for k, v := range fileds {

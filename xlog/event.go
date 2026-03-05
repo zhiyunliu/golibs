@@ -42,11 +42,11 @@ type Event struct {
 	Session string
 	Content string
 	Output  string
-	Tags    map[string]string
+	Tags    map[string]any
 }
 
 // NewEvent 构建日志事件
-func GetEvent(name string, level Level, session string, srvType string, content string, tags map[string]string) *Event {
+func GetEvent(name string, level Level, session string, srvType string, content string, tags map[string]any) *Event {
 	e := eventPool.Get().(*Event)
 	e.LogTime = time.Now()
 	e.Level = level

@@ -12,7 +12,7 @@ import (
 	"github.com/zhiyunliu/golibs/xlog"
 )
 
-type PortPicker func(logger xlog.Logger, localIp string, begin, end, step int64) int64
+type PortPicker func(logger Logger, localIp string, begin, end, step int64) int64
 
 var (
 	rnd      = rand.New(rand.NewSource(time.Now().Unix()))
@@ -28,14 +28,14 @@ var (
 	_portRegexpList []*addrRegexp = []*addrRegexp{
 		{
 			regexp: _portRegexpPattern1,
-			buildAddr: func(logger xlog.Logger, localIp string, subList []string) (string, error) {
+			buildAddr: func(logger Logger, localIp string, subList []string) (string, error) {
 				// 监听所有网卡的端口
 				return fmt.Sprintf("%s:%s", "", subList[0]), nil
 			},
 		},
 		{
 			regexp: _portRegexpPattern2,
-			buildAddr: func(logger xlog.Logger, localIp string, subList []string) (string, error) {
+			buildAddr: func(logger Logger, localIp string, subList []string) (string, error) {
 				begin, err := strconv.ParseInt(subList[0], 10, 32)
 				if err != nil {
 					return "", err
@@ -51,7 +51,7 @@ var (
 		},
 		{
 			regexp: _portRegexpPattern3,
-			buildAddr: func(logger xlog.Logger, localIp string, subList []string) (string, error) {
+			buildAddr: func(logger Logger, localIp string, subList []string) (string, error) {
 				begin, err := strconv.ParseInt(subList[0], 10, 32)
 				if err != nil {
 					return "", err
@@ -86,7 +86,7 @@ var (
 // [2000,30000)
 // [2000,30000):rand
 // [2000,30000):seq:5
-func GetAvaliableAddr(logger xlog.Logger, localIp string, addr string) (newAddr string, err error) {
+func GetAvaliableAddr(logger Logger, localIp string, addr string) (newAddr string, err error) {
 	for _, reg := range _portRegexpList {
 		if !reg.MatchString(addr) {
 			continue
@@ -96,7 +96,7 @@ func GetAvaliableAddr(logger xlog.Logger, localIp string, addr string) (newAddr 
 	return "", fmt.Errorf("指定端口配置错误:%s", addr)
 }
 
-func randPortPicker(logger xlog.Logger, localIp string, begin, end, step int64) int64 {
+func randPortPicker(logger Logger, localIp string, begin, end, step int64) int64 {
 	for {
 		np := rnd.Int63n(end-begin) + begin
 		logger.Logf(xlog.LevelInfo, "检测端口(rand):%d", np)
@@ -106,7 +106,7 @@ func randPortPicker(logger xlog.Logger, localIp string, begin, end, step int64) 
 	}
 }
 
-func seqPortPicker(logger xlog.Logger, localIp string, begin, end, step int64) int64 {
+func seqPortPicker(logger Logger, localIp string, begin, end, step int64) int64 {
 	for np := begin; np < end; np++ {
 		logger.Logf(xlog.LevelInfo, "检测端口(seq):%d", np)
 		if !ScanPort("TCP", localIp, np) {
@@ -129,13 +129,13 @@ func ScanPort(protocol string, hostname string, port int64) bool {
 
 type addrRegexp struct {
 	regexp    *regexp.Regexp
-	buildAddr func(logger xlog.Logger, localIp string, subList []string) (string, error)
+	buildAddr func(logger Logger, localIp string, subList []string) (string, error)
 }
 
 func (p addrRegexp) MatchString(addr string) bool {
 	return p.regexp.MatchString(addr)
 }
-func (p addrRegexp) BuildAddr(logger xlog.Logger, localIp string, addr string) (newAddr string, err error) {
+func (p addrRegexp) BuildAddr(logger Logger, localIp string, addr string) (newAddr string, err error) {
 	sublist := p.regexp.FindStringSubmatch(addr)
 	newAddr, err = p.buildAddr(logger, localIp, sublist[1:])
 	if err != nil {
