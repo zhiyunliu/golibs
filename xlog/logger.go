@@ -8,7 +8,7 @@ type Logger interface {
 	SessionID() string
 	Log(level Level, args ...any)
 	Logf(level Level, format string, args ...any)
-	LogChain(level Level, msg string, opts ...EventOption)
+	Chain(level Level, msg string, opts ...EventOption)
 	Close()
 }
 

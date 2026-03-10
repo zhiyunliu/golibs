@@ -170,7 +170,7 @@ func (logger *LoggerWrap) Logf(level Level, format string, args ...interface{}) 
 	event := GetEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprintf(format, args...), logger.opts.data)
 	newIdx := atomic.AddInt32(&logger.idx, 1)
 	event.Idx = newIdx
-	_writerPipes.Write(event)
+	_ = _writerPipes.Write(event)
 }
 func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	defer func() {
@@ -185,10 +185,10 @@ func (logger *LoggerWrap) Log(level Level, args ...interface{}) {
 	event := GetEvent(logger.opts.name, level, logger.opts.sid, logger.opts.srvType, fmt.Sprint(args...), logger.opts.data)
 	newIdx := atomic.AddInt32(&logger.idx, 1)
 	event.Idx = newIdx
-	_writerPipes.Write(event)
+	_ = _writerPipes.Write(event)
 }
 
-func (logger *LoggerWrap) LogChain(level Level, msg string, opts ...EventOption) {
+func (logger *LoggerWrap) Chain(level Level, msg string, opts ...EventOption) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("[Recovery] panic recovered:\n%s\n%s", err, getStack())
@@ -204,7 +204,7 @@ func (logger *LoggerWrap) LogChain(level Level, msg string, opts ...EventOption)
 	for _, item := range opts {
 		item(event)
 	}
-	_writerPipes.Write(event)
+	_ = _writerPipes.Write(event)
 }
 
 var New = GetLogger

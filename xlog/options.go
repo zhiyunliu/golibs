@@ -56,3 +56,13 @@ func WithFields(fileds map[string]string) Option {
 		}
 	}
 }
+
+// EventOption 事件选项
+func WithEventData(k string, v any) EventOption {
+	return func(evt *Event) {
+		if evt.Tags == nil {
+			evt.Tags = map[string]any{}
+		}
+		evt.Tags[k] = v
+	}
+}
