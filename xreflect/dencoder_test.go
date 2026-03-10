@@ -576,3 +576,235 @@ func Test_mapDecoder(t *testing.T) {
 	}
 
 }
+
+func Test_dencodeByteSlice(t *testing.T) {
+	val := struct {
+		B1 []byte
+		B2 []byte
+	}{}
+
+	refVal := reflect.ValueOf(&val)
+	refVal = refVal.Elem()
+
+	tests := []struct {
+		name    string
+		v       reflect.Value
+		val     any
+		wantErr bool
+	}{
+		{name: "normal", v: refVal.FieldByName("B1"), val: []byte{1, 2, 3}, wantErr: false},
+		{name: "nil", v: refVal.FieldByName("B2"), val: (*[]byte)(nil), wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := dencodeByteSlice(tt.v, tt.val); (err != nil) != tt.wantErr {
+				t.Errorf("dencodeByteSlice() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+	if !reflect.DeepEqual(val.B1, []byte{1, 2, 3}) {
+		t.Errorf("dencodeByteSlice() B1 = %v, want [1 2 3]", val.B1)
+	}
+}
+
+func Test_dencodeByteSlice_zeroValue(t *testing.T) {
+	val := struct {
+		B1 []byte
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	// zero value (empty []byte) should return nil
+	err := dencodeByteSlice(refVal.FieldByName("B1"), []byte{})
+	if err != nil {
+		t.Errorf("dencodeByteSlice(zero) error = %v", err)
+	}
+}
+
+func Test_defaultDecoder(t *testing.T) {
+	val := struct {
+		M map[string]int
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+
+	err := defaultDecoder(refVal.FieldByName("M"), map[string]int{"a": 1})
+	if err != nil {
+		t.Errorf("defaultDecoder(map) error = %v", err)
+	}
+	if !reflect.DeepEqual(val.M, map[string]int{"a": 1}) {
+		t.Errorf("defaultDecoder(map) = %v, want map[a:1]", val.M)
+	}
+}
+
+func Test_defaultDecoder_nonMap(t *testing.T) {
+	val := struct {
+		S string
+	}{S: "hello"}
+	refVal := reflect.ValueOf(&val).Elem()
+	// default decoder with non-map kind does nothing
+	err := defaultDecoder(refVal.FieldByName("S"), "world")
+	if err != nil {
+		t.Errorf("defaultDecoder(string) error = %v", err)
+	}
+}
+
+func Test_boolDecoder_zeroValue(t *testing.T) {
+	val := struct {
+		B bool
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	// zero value should not change the field
+	err := boolDecoder(refVal.FieldByName("B"), false)
+	if err != nil {
+		t.Errorf("boolDecoder(zero) error = %v", err)
+	}
+	if val.B != false {
+		t.Errorf("boolDecoder(zero) = %v, want false", val.B)
+	}
+}
+
+func Test_intDecoder_zeroValue(t *testing.T) {
+	val := struct {
+		I int
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := intDecoder(refVal.FieldByName("I"), 0)
+	if err != nil {
+		t.Errorf("intDecoder(zero) error = %v", err)
+	}
+}
+
+func Test_uintDecoder_zeroValue(t *testing.T) {
+	val := struct {
+		U uint
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := uintDecoder(refVal.FieldByName("U"), uint(0))
+	if err != nil {
+		t.Errorf("uintDecoder(zero) error = %v", err)
+	}
+}
+
+func Test_floatDecoder_zeroValue(t *testing.T) {
+	val := struct {
+		F float64
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := float64Decoder(refVal.FieldByName("F"), 0.0)
+	if err != nil {
+		t.Errorf("floatDecoder(zero) error = %v", err)
+	}
+}
+
+func Test_stringDecoder_zeroValue(t *testing.T) {
+	val := struct {
+		S string
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := stringDecoder(refVal.FieldByName("S"), "")
+	if err != nil {
+		t.Errorf("stringDecoder(zero) error = %v", err)
+	}
+}
+
+func Test_mapScanDecoder_nil(t *testing.T) {
+	val := struct {
+		V item
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := mapScanDecoder(refVal.FieldByName("V"), nil)
+	if err != nil {
+		t.Errorf("mapScanDecoder(nil) error = %v", err)
+	}
+}
+
+func Test_mapDecoder_nil(t *testing.T) {
+	val := struct {
+		M map[string]int
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := mapDecoder(refVal.FieldByName("M"), nil)
+	if err != nil {
+		t.Errorf("mapDecoder(nil) error = %v", err)
+	}
+}
+
+func Test_structDecoder_nil(t *testing.T) {
+	val := struct {
+		I item
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := structDecoder(refVal.FieldByName("I"), nil)
+	if err != nil {
+		t.Errorf("structDecoder(nil) error = %v", err)
+	}
+}
+
+func Test_structDecoder_zeroRefVal(t *testing.T) {
+	val := struct {
+		I item
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	// zero reflect.Value of the same type
+	err := structDecoder(refVal.FieldByName("I"), item{})
+	if err != nil {
+		t.Errorf("structDecoder(zero) error = %v", err)
+	}
+}
+
+func Test_newTypeDencoder_allTypes(t *testing.T) {
+	// Covers the newTypeDencoder switch branches
+	types := []reflect.Type{
+		reflect.TypeOf(true),
+		reflect.TypeOf(int(0)),
+		reflect.TypeOf(int8(0)),
+		reflect.TypeOf(uint(0)),
+		reflect.TypeOf(float32(0)),
+		reflect.TypeOf(float64(0)),
+		reflect.TypeOf(""),
+		reflect.TypeOf(struct{}{}),
+		reflect.TypeOf(map[string]int{}),
+		reflect.TypeOf([]int{}),
+		reflect.TypeOf([3]int{}),
+		reflect.TypeOf(make(chan int)), // default branch
+	}
+
+	for _, typ := range types {
+		dec := newTypeDencoder(typ)
+		if dec == nil {
+			t.Errorf("newTypeDencoder(%v) returned nil", typ)
+		}
+	}
+}
+
+func Test_intDecoder_error(t *testing.T) {
+	val := struct {
+		I int
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	// string that can't be parsed as int
+	err := intDecoder(refVal.FieldByName("I"), "abc")
+	if err == nil {
+		t.Error("intDecoder(\"abc\") expected error, got nil")
+	}
+}
+
+func Test_uintDecoder_error(t *testing.T) {
+	val := struct {
+		U uint
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := uintDecoder(refVal.FieldByName("U"), "abc")
+	if err == nil {
+		t.Error("uintDecoder(\"abc\") expected error, got nil")
+	}
+}
+
+func Test_floatDecoder_error(t *testing.T) {
+	val := struct {
+		F float64
+	}{}
+	refVal := reflect.ValueOf(&val).Elem()
+	err := float64Decoder(refVal.FieldByName("F"), "abc")
+	if err == nil {
+		t.Error("floatDecoder(\"abc\") expected error, got nil")
+	}
+}

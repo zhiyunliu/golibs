@@ -196,14 +196,7 @@ func GetRealReflectVal(f *field, v reflect.Value) (subv reflect.Value) {
 	for _, i := range f.Index {
 		if subv.Kind() == reflect.Pointer {
 			if subv.IsNil() {
-				// If a struct embeds a pointer to an unexported type,
-				// it is not possible to set a newly allocated value
-				// since the field is unexported.
-				//
-				// See https://golang.org/issue/21357
 				if !subv.CanSet() {
-					// Invalidate subv to ensure d.value(subv) skips over
-					// the JSON value without assigning it to subv.
 					subv = reflect.Value{}
 					break
 				}
@@ -214,4 +207,16 @@ func GetRealReflectVal(f *field, v reflect.Value) (subv reflect.Value) {
 		subv = subv.Field(i)
 	}
 	return
+}
+
+// derefInputVal 解引用输入值的指针并检查零值，用于减少各 decoder 中的重复代码
+func derefInputVal(val any) (any, bool) {
+	rv := reflect.ValueOf(val)
+	if rv.IsZero() {
+		return nil, false
+	}
+	for rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	return rv.Interface(), true
 }

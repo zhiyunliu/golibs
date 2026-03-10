@@ -13,11 +13,31 @@ func GetBool(tmp interface{}) bool {
 	if tmp == nil {
 		return false
 	}
-	tmpB, err := strconv.ParseBool(fmt.Sprint(tmp))
-	if err != nil {
-		return false
+	switch v := tmp.(type) {
+	case bool:
+		return v
+	case *bool:
+		if v == nil {
+			return false
+		}
+		return *v
+	case int:
+		return v != 0
+	case int64:
+		return v != 0
+	case string:
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return false
+		}
+		return b
+	default:
+		b, err := strconv.ParseBool(fmt.Sprint(tmp))
+		if err != nil {
+			return false
+		}
+		return b
 	}
-	return tmpB
 }
 
 func GetString(v interface{}) string {

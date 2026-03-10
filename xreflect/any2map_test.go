@@ -809,3 +809,76 @@ func TestAnyToMapWithMultipleAnonymousStructsPtr2(t *testing.T) {
 	assert.Equal(t, nil, result["base"])
 	assert.Equal(t, "test", result["name"])
 }
+
+// TestAnyToMapWithStructFieldFalse 测试 WithStructField(false) 选项
+func TestAnyToMapWithStructFieldFalse(t *testing.T) {
+	type Inner struct {
+		Value string `json:"value"`
+	}
+	type Outer struct {
+		Inner Inner  `json:"inner"`
+		Name  string `json:"name"`
+	}
+
+	obj := Outer{
+		Inner: Inner{Value: "deep"},
+		Name:  "test",
+	}
+
+	result, err := AnyToMap(obj, WithStructField(false))
+	assert.Nil(t, err)
+	assert.Equal(t, "test", result["name"])
+	// WithStructField false means the struct encoder won't recurse into nested structs
+	_, isMap := result["inner"].(map[string]interface{})
+	assert.False(t, isMap, "inner should NOT be a map when StructField=false")
+}
+
+// TestAnyToMapWithSliceItemFalse 测试 WithSliceItem(false) 选项
+func TestAnyToMapWithSliceItemFalse(t *testing.T) {
+	type Container struct {
+		Items []int `json:"items"`
+	}
+
+	obj := Container{
+		Items: []int{1, 2, 3},
+	}
+
+	result, err := AnyToMap(obj, WithSliceItem(false))
+	assert.Nil(t, err)
+	// WithSliceItem false: the slice should be returned as original type
+	items, ok := result["items"].([]int)
+	assert.True(t, ok, "items should be []int when SliceItem=false")
+	assert.Equal(t, 3, len(items))
+}
+
+// TestAnyToMapWithDisableJSONMarshalerFalse 测试 WithDisableJSONMarshaler(false) 选项
+func TestAnyToMapWithDisableJSONMarshalerFalse(t *testing.T) {
+	type Config struct {
+		Custom CustomJsonMarshaler `json:"custom"`
+	}
+
+	obj := &Config{
+		Custom: CustomJsonMarshaler{Value: "hello"},
+	}
+
+	result, err := AnyToMap(obj, WithDisableJSONMarshaler(false))
+	assert.Nil(t, err)
+	// With DisableJSONMarshaler=false, json.Marshaler should be used
+	_, isByte := result["custom"].([]byte)
+	assert.True(t, isByte, "custom should be []byte when DisableJSONMarshaler=false, got %T", result["custom"])
+}
+
+// TestStructOptions_IsValidDepth 测试 IsValidDepth 方法
+func TestStructOptions_IsValidDepth(t *testing.T) {
+	opts := StructOptions{curDepth: 5, MaxDepth: 10}
+	assert.True(t, opts.IsValidDepth())
+	assert.True(t, opts.IsValidDepth(5))  // 5+5 <= 10
+	assert.False(t, opts.IsValidDepth(6)) // 5+6 > 10
+
+	opts2 := StructOptions{curDepth: 10, MaxDepth: 10}
+	assert.True(t, opts2.IsValidDepth())   // 10 <= 10
+	assert.False(t, opts2.IsValidDepth(1)) // 10+1 > 10
+
+	opts3 := StructOptions{curDepth: 11, MaxDepth: 10}
+	assert.False(t, opts3.IsValidDepth()) // 11 > 10
+}
