@@ -67,10 +67,7 @@ func (o TagOptions) GetArgsInfo(opt string) (args []string, ok bool) {
 		name, tmparg, _ := strings.Cut(name, ":")
 		if name == opt {
 			args = strings.FieldsFunc(tmparg, func(r rune) bool {
-				if r == '=' || r == '&' {
-					return true
-				}
-				return false
+				return r == '=' || r == '&'
 			})
 			return args, true
 		}
@@ -84,7 +81,7 @@ func isValidTag(s string) bool {
 	}
 	for _, c := range s {
 		switch {
-		case strings.ContainsRune("!#$%&()*+-./:;<=>?@[]^_{|}~ ", c):
+		case isAllowedTagPunctuation(c):
 			// Backslash and quote chars are reserved, but
 			// otherwise any punctuation chars are allowed
 			// in a tag name.
@@ -93,4 +90,13 @@ func isValidTag(s string) bool {
 		}
 	}
 	return true
+}
+
+// isAllowedTagPunctuation 使用 switch 替代 strings.ContainsRune 以避免每次调用时的字符串扫描开销
+func isAllowedTagPunctuation(c rune) bool {
+	switch c {
+	case '!', '#', '$', '%', '&', '(', ')', '*', '+', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', ']', '^', '_', '{', '|', '}', '~', ' ':
+		return true
+	}
+	return false
 }

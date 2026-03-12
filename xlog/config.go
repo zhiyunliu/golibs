@@ -8,7 +8,7 @@ var (
 	DefaultParam = &ConfigParam{
 		ConfigPath: "../etc/logger.json",
 		Layout: &Layout{
-			LevelName: LevelInfo.FullName(), Path: "../log/%ndate/%level/%hh.log", Content: "[%datetime][%l][%session][%idx][@cip][@uid] %content",
+			LevelName: LevelInfo.FullName(), Path: "../log/%ndate/%level/%hh.log", Content: "[%datetime][%l][%session][%idx] %content",
 		},
 	}
 

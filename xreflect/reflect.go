@@ -3,17 +3,22 @@ package xreflect
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
 	"sync"
+	"time"
 )
 
 var (
 	fieldCache        sync.Map
 	encoderCache      sync.Map
 	dencoderCache     sync.Map
+	textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	structValuerType  = reflect.TypeOf((*StructValuer)(nil)).Elem()
+	timeType          = reflect.TypeOf(time.Time{})
 	stringerType      = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
 	driverValuerType  = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
 	jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
@@ -21,7 +26,11 @@ var (
 	mapScannerType    = reflect.TypeOf((*MapScanner)(nil)).Elem()
 )
 
-type encoderFunc func(v reflect.Value) any
+type StructValuer interface {
+	Value() any
+}
+
+type encoderFunc func(v reflect.Value, opts StructOptions) any
 type dencoderFunc func(reflect.Value, any) error
 
 func CachedTypeFields(t reflect.Type) *StructFields {
@@ -187,14 +196,7 @@ func GetRealReflectVal(f *field, v reflect.Value) (subv reflect.Value) {
 	for _, i := range f.Index {
 		if subv.Kind() == reflect.Pointer {
 			if subv.IsNil() {
-				// If a struct embeds a pointer to an unexported type,
-				// it is not possible to set a newly allocated value
-				// since the field is unexported.
-				//
-				// See https://golang.org/issue/21357
 				if !subv.CanSet() {
-					// Invalidate subv to ensure d.value(subv) skips over
-					// the JSON value without assigning it to subv.
 					subv = reflect.Value{}
 					break
 				}
@@ -205,4 +207,16 @@ func GetRealReflectVal(f *field, v reflect.Value) (subv reflect.Value) {
 		subv = subv.Field(i)
 	}
 	return
+}
+
+// derefInputVal 解引用输入值的指针并检查零值，用于减少各 decoder 中的重复代码
+func derefInputVal(val any) (any, bool) {
+	rv := reflect.ValueOf(val)
+	if rv.IsZero() {
+		return nil, false
+	}
+	for rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	return rv.Interface(), true
 }

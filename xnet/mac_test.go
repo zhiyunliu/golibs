@@ -48,7 +48,7 @@ func TestGetLocalMac(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//	GetInterfaces = tt.mockInterfaces
+			GetInterfaces = tt.mockInterfaces
 			result := GetLocalMac()
 			if result != tt.expectedMac {
 				t.Errorf("GetLocalMac() = %v, want %v", result, tt.expectedMac)

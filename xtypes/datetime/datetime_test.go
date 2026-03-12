@@ -35,7 +35,7 @@ func TestMarshalJSON(t *testing.T) {
 // 编写其他函数的测试用例...
 func TestDateTime_Scan(t *testing.T) {
 	// 测试传入 time.Time 类型的参数
-	inputTime := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
+	inputTime := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local)
 	dt := &DateTime{}
 	err := dt.Scan(inputTime)
 	if err != nil {
@@ -52,7 +52,7 @@ func TestDateTime_Scan(t *testing.T) {
 	if err != nil {
 		t.Errorf("Scan 函数未能正确处理字符串类型参数: %v", err)
 	}
-	expectedTimeStr, _ := time.Parse(DefaultTimeformat, inputString)
+	expectedTimeStr, _ := time.ParseInLocation(DefaultTimeformat, inputString, time.Local)
 	expectedTimeStr = expectedTimeStr.Local()
 	expectedTime = New(expectedTimeStr)
 	if !reflect.DeepEqual(dt, expectedTime) {
@@ -79,7 +79,7 @@ func TestDateTime_UnmarshalJSON(t *testing.T) {
 	if err != nil {
 		t.Errorf("UnmarshalJSON 函数未能正确处理有效的 JSON 数据: %v", err)
 	}
-	expectedTime, _ := time.Parse(DefaultTimeformat, "2022-01-01 12:00:00")
+	expectedTime, _ := time.ParseInLocation(DefaultTimeformat, "2022-01-01 12:00:00", time.Local)
 	expectedTime = expectedTime.Local()
 	expectedDateTime := New(expectedTime)
 	if !reflect.DeepEqual(dt, expectedDateTime) {
@@ -119,5 +119,56 @@ func TestDateTime_Value(t *testing.T) {
 
 	if result != expectedValue {
 		t.Errorf("Value 方法返回结果错误")
+	}
+}
+
+func TestDateTime_MarshalBSONValue(t *testing.T) {
+	testTime := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
+	d := New(testTime)
+
+	bsonType, data, err := d.MarshalBSONValue()
+	if err != nil {
+		t.Errorf("MarshalBSONValue 返回了错误: %v", err)
+	}
+
+	if bsonType != 9 { // BSON datetime type is 9
+		t.Errorf("MarshalBSONValue 返回了错误的类型，期望 9，实际得到 %v", bsonType)
+	}
+
+	if len(data) == 0 {
+		t.Errorf("MarshalBSONValue 返回的数据为空")
+	}
+}
+
+func TestDateTime_UnmarshalBSONValue(t *testing.T) {
+	// 正常情况：测试正确的 datetime 类型数据
+	testTime := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
+	d := New(testTime)
+
+	// 先通过 MarshalBSONValue 获取数据
+	bsonType, data, err := d.MarshalBSONValue()
+	if err != nil {
+		t.Fatalf("准备测试数据时发生错误: %v", err)
+	}
+
+	newD := &DateTime{}
+	err = newD.UnmarshalBSONValue(bsonType, data)
+	if err != nil {
+		t.Errorf("UnmarshalBSONValue 返回了错误: %v", err)
+	}
+
+	// 比较时间值是否相等（精确到秒）
+	if int(newD.Unix()) != int(d.Unix()) {
+		t.Errorf("UnmarshalBSONValue 返回的时间不匹配，期望 %v，实际得到 %v", d.Time, newD.Time)
+	}
+
+	// 错误情况：测试不支持的类型
+	err = newD.UnmarshalBSONValue(2, data) // 2 is string type in BSON
+	if err == nil {
+		t.Error("UnmarshalBSONValue 应该对不支持的类型返回错误")
+	}
+
+	if err.Error() != "DateTime UnmarshalBSONValue type error, want DateTime but get string" {
+		t.Errorf("UnmarshalBSONValue 返回了错误的消息，期望包含 'want DateTime but get string'，实际得到 '%v'", err.Error())
 	}
 }

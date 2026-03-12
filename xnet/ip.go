@@ -10,8 +10,12 @@ import (
 const StaticLocalIP = "127.0.0.1"
 
 var (
-	RetryTimes int           = 10
-	Interval   time.Duration = time.Second * 5
+	// 重试次数
+	RetryTimes int = 10
+	// 间隔时间
+	Interval time.Duration = time.Second * 5
+	// 获取网卡信息函数
+	GetInterfaces = defaultGetInterfaces
 )
 
 func getInterfaceAddrs() (addrs []net.Addr, err error) {
@@ -61,7 +65,7 @@ func GetLocalIP(masks ...string) string {
 	return StaticLocalIP
 }
 
-//ipv4: IsLocalIP 检测IP地址是否内网
+// ipv4: IsLocalIP 检测IP地址是否内网
 func IsLocalIPv4Addr(ip string) bool {
 	return IsLocalIPv4(net.ParseIP(ip))
 }

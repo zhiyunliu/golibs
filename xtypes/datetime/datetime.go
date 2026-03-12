@@ -2,10 +2,14 @@ package datetime
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/zhiyunliu/golibs/bytesconv"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // DateTime DateTime
@@ -112,4 +116,21 @@ func transferTolocal(t time.Time) time.Time {
 	timeStr := t.Format("2006-01-02 15:04:05")
 	t1, _ := time.ParseInLocation("2006-01-02 15:04:05", timeStr, time.Local)
 	return t1
+}
+
+func (t DateTime) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bson.MarshalValue(time.Time(t.Time))
+}
+
+func (t *DateTime) UnmarshalBSONValue(bt bsontype.Type, data []byte) error {
+	if bt != bson.TypeDateTime {
+		return errors.New("DateTime UnmarshalBSONValue type error, want DateTime but get " + bt.String())
+	}
+	var tm primitive.DateTime
+	err := bson.UnmarshalValue(bt, data, &tm)
+	if err != nil {
+		return err
+	}
+	*t = *New(tm.Time())
+	return nil
 }

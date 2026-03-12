@@ -40,6 +40,14 @@ func Test_isValidTag(t *testing.T) {
 		want bool
 	}{
 		{name: "1", s: "field", want: true},
+		{name: "empty", s: "", want: false},
+		{name: "special_chars", s: "field-name", want: true},
+		{name: "with_dot", s: "field.name", want: true},
+		{name: "with_space", s: "field name", want: true},
+		{name: "unicode_letter", s: "字段", want: true},
+		{name: "digit_start", s: "1field", want: true},
+		{name: "backslash", s: "field\\name", want: false},
+		{name: "quote", s: "field\"name", want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -89,4 +97,65 @@ func TestXxx(t *testing.T) {
 
 	t.Log(argInfo)
 
+}
+
+func TestParseTag_empty(t *testing.T) {
+	name, opts := parseTag("")
+	if name != "" {
+		t.Errorf("parseTag(\"\") name = %q, want empty", name)
+	}
+	if opts != "" {
+		t.Errorf("parseTag(\"\") opts = %q, want empty", opts)
+	}
+}
+
+func TestParseTag_nameOnly(t *testing.T) {
+	name, opts := parseTag("myfield")
+	if name != "myfield" {
+		t.Errorf("parseTag name = %q, want myfield", name)
+	}
+	if opts != "" {
+		t.Errorf("parseTag opts = %q, want empty", opts)
+	}
+}
+
+func TestTagOptions_Contains_empty(t *testing.T) {
+	opts := TagOptions("")
+	if opts.Contains("anything") {
+		t.Error("empty options should not contain anything")
+	}
+}
+
+func TestTagOptions_GetArgsInfo_empty(t *testing.T) {
+	opts := TagOptions("")
+	args, ok := opts.GetArgsInfo("anything")
+	if ok {
+		t.Error("empty options should not find anything")
+	}
+	if args != nil {
+		t.Errorf("empty options args = %v, want nil", args)
+	}
+}
+
+func TestTagOptions_GetArgsInfo_varchar(t *testing.T) {
+	_, opts := parseTag("field,dbtype:varchar")
+	args, ok := opts.GetArgsInfo("dbtype")
+	if !ok {
+		t.Error("GetArgsInfo(dbtype) should return true")
+	}
+	if len(args) != 1 || args[0] != "varchar" {
+		t.Errorf("GetArgsInfo(dbtype) args = %v, want [varchar]", args)
+	}
+}
+
+func TestTagOptions_GetArgsInfo_multipleArgs(t *testing.T) {
+	_, opts := parseTag("field,dbtype:key1=val1&key2=val2")
+	args, ok := opts.GetArgsInfo("dbtype")
+	if !ok {
+		t.Error("GetArgsInfo should return true")
+	}
+	expected := []string{"key1", "val1", "key2", "val2"}
+	if !reflect.DeepEqual(args, expected) {
+		t.Errorf("GetArgsInfo args = %v, want %v", args, expected)
+	}
 }

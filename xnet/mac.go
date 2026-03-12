@@ -45,7 +45,6 @@ func GetLocalMac(masks ...string) string {
 	return StaticLocalMac
 }
 
-var GetInterfaces = defaultGetInterfaces
 
 func defaultGetInterfaces() (addrs []net.Interface, err error) {
 	var retryCnt int = 0

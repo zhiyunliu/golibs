@@ -11,19 +11,7 @@ import (
 type testLogger struct {
 }
 
-func (t testLogger) Name() string {
-	return "test"
-}
-func (t testLogger) SessionID() string {
-	return "testid"
-}
-func (t testLogger) Log(level xlog.Level, args ...interface{}) {
-
-}
 func (t testLogger) Logf(level xlog.Level, format string, args ...interface{}) {
-
-}
-func (t testLogger) Close() {
 
 }
 

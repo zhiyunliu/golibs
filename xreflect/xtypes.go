@@ -13,11 +13,31 @@ func GetBool(tmp interface{}) bool {
 	if tmp == nil {
 		return false
 	}
-	tmpB, err := strconv.ParseBool(fmt.Sprint(tmp))
-	if err != nil {
-		return false
+	switch v := tmp.(type) {
+	case bool:
+		return v
+	case *bool:
+		if v == nil {
+			return false
+		}
+		return *v
+	case int:
+		return v != 0
+	case int64:
+		return v != 0
+	case string:
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return false
+		}
+		return b
+	default:
+		b, err := strconv.ParseBool(fmt.Sprint(tmp))
+		if err != nil {
+			return false
+		}
+		return b
 	}
-	return tmpB
 }
 
 func GetString(v interface{}) string {
@@ -36,6 +56,17 @@ func GetString(v interface{}) string {
 		return bytesconv.BytesToString(*t)
 	case fmt.Stringer:
 		return t.String()
+
+	}
+	// 反射处理数字类型
+	val := reflect.ValueOf(v)
+	switch val.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(val.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return strconv.FormatUint(val.Uint(), 10)
+	case reflect.Float32, reflect.Float64:
+		return strconv.FormatFloat(val.Float(), 'f', -1, val.Type().Bits())
 	default:
 		return fmt.Sprintf("%+v", v)
 	}

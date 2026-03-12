@@ -101,6 +101,25 @@ func TestSMap_GetWithDefault(t *testing.T) {
 	}
 }
 
+func TestSMap_GetOrDefault(t *testing.T) {
+	// 初始化一个 SMap 实例
+	sm := make(SMap)
+	sm["key1"] = "value1"
+	sm["key2"] = "value2"
+
+	// 调用 GetOrDefault 方法并传入存在的键
+	result1 := sm.GetOrDefault("key1", "default1")
+	if result1 != "value1" {
+		t.Errorf("GetOrDefault 方法未返回预期的值: %s", result1)
+	}
+
+	// 调用 GetOrDefault 方法并传入不存在的键
+	result2 := sm.GetOrDefault("key3", "default3")
+	if result2 != "default3" {
+		t.Errorf("GetOrDefault 方法未返回默认值: %s", result2)
+	}
+}
+
 func TestSMap_Get(t *testing.T) {
 	// 初始化一个 SMap 实例
 	sm := make(SMap)

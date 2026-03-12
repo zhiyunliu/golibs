@@ -79,15 +79,10 @@ func newTypeDencoder(t reflect.Type) dencoderFunc {
 // }
 
 func boolDecoder(v reflect.Value, val any) error {
-	rv := reflect.ValueOf(val)
-	if rv.IsZero() {
+	val, ok := derefInputVal(val)
+	if !ok {
 		return nil
 	}
-
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	val = rv.Interface()
 
 	tmpv := GetBool(val)
 	if v.Kind() == reflect.Pointer {
@@ -101,15 +96,11 @@ func boolDecoder(v reflect.Value, val any) error {
 }
 
 func intDecoder(v reflect.Value, val any) error {
-	rv := reflect.ValueOf(val)
-	if rv.IsZero() {
+	val, ok := derefInputVal(val)
+	if !ok {
 		return nil
 	}
 
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	val = rv.Interface()
 	intval, err := GetInt64(val)
 	if err != nil {
 		return err
@@ -125,15 +116,10 @@ func intDecoder(v reflect.Value, val any) error {
 }
 
 func uintDecoder(v reflect.Value, val any) error {
-	rv := reflect.ValueOf(val)
-	if rv.IsZero() {
+	val, ok := derefInputVal(val)
+	if !ok {
 		return nil
 	}
-
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	val = rv.Interface()
 
 	int64val, err := GetUint64(val)
 	if err != nil {
@@ -153,14 +139,10 @@ func uintDecoder(v reflect.Value, val any) error {
 type floatDecoder int // number of bits
 
 func (bits floatDecoder) dencode(v reflect.Value, val any) error {
-	rv := reflect.ValueOf(val)
-	if rv.IsZero() {
+	val, ok := derefInputVal(val)
+	if !ok {
 		return nil
 	}
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	val = rv.Interface()
 
 	f64val, err := GetFloat64(val)
 	if err != nil {
@@ -182,15 +164,11 @@ var (
 )
 
 func stringDecoder(v reflect.Value, val any) error {
-	rv := reflect.ValueOf(val)
-	if rv.IsZero() {
+	val, ok := derefInputVal(val)
+	if !ok {
 		return nil
 	}
 
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	val = rv.Interface()
 	strv := GetString(val)
 
 	if v.Kind() == reflect.Pointer {
@@ -417,7 +395,7 @@ func structDecoder(v reflect.Value, val any) error {
 	if v.CanConvert(scannerType) {
 		return v.Interface().(sql.Scanner).Scan(val)
 	}
-	
+
 	if v.CanAddr() && v.Addr().CanConvert(scannerType) {
 		return v.Addr().Interface().(sql.Scanner).Scan(val)
 	}
