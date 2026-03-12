@@ -215,7 +215,7 @@ func (se structEncoder) encode(v reflect.Value, opts StructOptions) any {
 	if opts.StructField && opts.IsValidDepth(1) {
 		params := make(map[string]any)
 		for _, f := range se.fields.ExactName {
-			if val, ok := f.Encoder(v, opts); ok {
+			if val, ok := f.EncoderWithOption(v, opts); ok {
 				params[f.Name] = val
 			}
 		}

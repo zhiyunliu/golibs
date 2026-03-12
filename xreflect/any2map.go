@@ -88,7 +88,7 @@ func AnyToMap(value interface{}, opts ...StructOption) (map[string]any, error) {
 		// 如果是struct类型，遍历字段并使用json标签作为键
 		fields := CachedTypeFields(val.Type())
 		for _, f := range fields.ExactName {
-			if val, ok := f.Encoder(val, options); ok {
+			if val, ok := f.EncoderWithOption(val, options); ok {
 				result[f.Name] = val
 			}
 		}

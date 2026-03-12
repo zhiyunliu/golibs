@@ -59,7 +59,17 @@ func (f *field) Dencoder(rv reflect.Value, val any) (err error) {
 	return
 }
 
-func (f *field) Encoder(rv reflect.Value, opts StructOptions) (val any, ok bool) {
+// Deprecated 使用EncoderWithOption代替
+func (f *field) Encoder(rv reflect.Value) (val any, ok bool) {
+	return f.EncoderWithOption(rv, StructOptions{MaxDepth: 1})
+}
+
+// Deprecated 使用 EncoderV2WithOption
+func (f *field) EncoderV2(rv reflect.Value) (val any, fv reflect.Value, ok bool) {
+	return f.EncoderV2WithOption(rv, StructOptions{MaxDepth: 1})
+}
+
+func (f *field) EncoderWithOption(rv reflect.Value, opts StructOptions) (val any, ok bool) {
 	opts.curDepth++
 	if !opts.IsValidDepth() {
 		return nil, false
@@ -72,7 +82,7 @@ func (f *field) Encoder(rv reflect.Value, opts StructOptions) (val any, ok bool)
 	return f.encoderFunc(fv, opts), true
 }
 
-func (f *field) EncoderV2(rv reflect.Value, opts StructOptions) (val any, fv reflect.Value, ok bool) {
+func (f *field) EncoderV2WithOption(rv reflect.Value, opts StructOptions) (val any, fv reflect.Value, ok bool) {
 	opts.curDepth++
 	if !opts.IsValidDepth() {
 		return nil, reflect.Value{}, false

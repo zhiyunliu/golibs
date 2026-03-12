@@ -212,7 +212,7 @@ func Test_field_Encoder(t *testing.T) {
 	fields := CachedTypeFields(rv.Type())
 
 	f := fields.ExactName["name"]
-	v, ok := f.Encoder(rv, StructOptions{MaxDepth: 5})
+	v, ok := f.Encoder(rv)
 	if !ok {
 		t.Error("Encoder should return ok=true")
 	}
@@ -231,7 +231,7 @@ func Test_field_Encoder_exceedDepth(t *testing.T) {
 
 	f := fields.ExactName["name"]
 	// MaxDepth=0, curDepth will become 1 after increment -> exceeds
-	_, ok := f.Encoder(rv, StructOptions{MaxDepth: 0})
+	_, ok := f.EncoderWithOption(rv, StructOptions{MaxDepth: 0})
 	if ok {
 		t.Error("Encoder should return ok=false when depth exceeded")
 	}

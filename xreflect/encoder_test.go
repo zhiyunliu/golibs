@@ -64,7 +64,7 @@ func teststructEncoder(input any) (params map[string]any, err error) {
 	fields := CachedTypeFields(refval.Type())
 
 	for _, f := range fields.ExactName {
-		if val, _, ok := f.EncoderV2(refval, StructOptions{MaxDepth: 1}); ok {
+		if val, _, ok := f.EncoderV2(refval); ok {
 			params[f.Name] = val
 		}
 	}
@@ -430,7 +430,7 @@ func Test_structEncoder_JsonMarshaler(t *testing.T) {
 	refval := reflect.ValueOf(input)
 	fields := CachedTypeFields(refval.Type())
 	for _, f := range fields.ExactName {
-		if val, _, ok := f.EncoderV2(refval, StructOptions{MaxDepth: 1, DisableJSONMarshaler: false}); ok {
+		if val, _, ok := f.EncoderV2(refval); ok {
 			params[f.Name] = val
 		}
 	}
