@@ -2,7 +2,6 @@ package v2
 
 import (
 	"strings"
-	"sync"
 
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/zhiyunliu/golibs/xpath"
@@ -13,19 +12,18 @@ type Patterns = xpath.Patterns
 type StrPattern = xpath.StrPattern
 
 // Match 基于前缀树的匹配器
-type Match struct {
-	patterns  []Pattern
+type Match[T Pattern] struct {
+	patterns  []T
 	Delimiter string
-	mutex     sync.Mutex
-	cache     *matchCacheWrap
+	cache     *matchCacheWrap[T]
 }
 
-type matchCacheWrap struct {
+type matchCacheWrap[T Pattern] struct {
 	enable   bool
-	cacheMap cmap.ConcurrentMap[string, Pattern]
+	cacheMap cmap.ConcurrentMap[string, T]
 }
 
-func (w *matchCacheWrap) Get(key string) (val Pattern, ok bool) {
+func (w *matchCacheWrap[T]) Get(key string) (val T, ok bool) {
 	if !w.enable {
 		return
 	}
@@ -33,7 +31,7 @@ func (w *matchCacheWrap) Get(key string) (val Pattern, ok bool) {
 	return
 }
 
-func (w *matchCacheWrap) SetIfAbsent(key string, val Pattern) bool {
+func (w *matchCacheWrap[T]) SetIfAbsent(key string, val T) bool {
 	if !w.enable {
 		return false
 	}
@@ -41,7 +39,7 @@ func (w *matchCacheWrap) SetIfAbsent(key string, val Pattern) bool {
 }
 
 // NewMatcher 创建一个新的匹配器
-func NewMatch(pathList []string, opts ...Option) *Match {
+func NewMatch(pathList []string, opts ...Option[Pattern]) *Match[Pattern] {
 	patterns := make([]Pattern, len(pathList))
 	for i := range pathList {
 		patterns[i] = StrPattern(pathList[i])
@@ -50,12 +48,12 @@ func NewMatch(pathList []string, opts ...Option) *Match {
 }
 
 // NewMatcherPatterns 使用Pattern切片创建匹配器
-func NewMatcherPatterns(pathList []Pattern, opts ...Option) *Match {
-	m := &Match{
+func NewMatcherPatterns[T Pattern](pathList []T, opts ...Option[T]) *Match[T] {
+	m := &Match[T]{
 		patterns:  pathList,
 		Delimiter: "/",
-		cache: &matchCacheWrap{
-			cacheMap: cmap.New[Pattern](),
+		cache: &matchCacheWrap[T]{
+			cacheMap: cmap.New[T](),
 		},
 	}
 
@@ -67,7 +65,7 @@ func NewMatcherPatterns(pathList []Pattern, opts ...Option) *Match {
 }
 
 // Match 尝试匹配给定的路径
-func (m *Match) Match(path string) (match bool, pattern Pattern) {
+func (m *Match[T]) Match(path string) (match bool, pattern T) {
 	sep := m.Delimiter
 	cacheKey := ""
 	if m.CanUseCache() {
@@ -85,7 +83,7 @@ func (m *Match) Match(path string) (match bool, pattern Pattern) {
 			return true, p
 		}
 	}
-	return false, nil
+	return false, *new(T)
 }
 
 // matchPathPattern 检查路径是否匹配给定模式
@@ -205,10 +203,10 @@ func simpleMatch(text, pattern string) bool {
 	return true
 }
 
-func (m *Match) CanUseCache() bool {
+func (m *Match[T]) CanUseCache() bool {
 	return m.cache.enable
 }
 
-func (m *Match) buildCacheKey(path, sep string) string {
+func (m *Match[T]) buildCacheKey(path, sep string) string {
 	return sep + ":" + path
 }

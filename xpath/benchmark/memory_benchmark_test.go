@@ -121,7 +121,7 @@ func BenchmarkV2MemoryUsageWithCache(b *testing.B) {
 			"/public/**",
 			"/files/*/upload",
 			"/data/**/export",
-		}, xpathv2.WithCache(true))
+		}, xpathv2.WithCache[xpathv2.Pattern](true))
 
 		// 执行一些匹配操作
 		_, _ = matcher.Match("/api/users/123")

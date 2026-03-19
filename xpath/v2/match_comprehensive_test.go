@@ -11,7 +11,7 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 		name          string
 		patterns      []string
 		path          string
-		opts          []Option
+		opts          []Option[Pattern]
 		expectMatch   bool
 		expectPattern string
 		note          string // 用于解释特殊情况
@@ -69,7 +69,7 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 			name:          "dot separator",
 			patterns:      []string{"api.users", "api.products"},
 			path:          "api.users",
-			opts:          []Option{WithDelimiter(".")},
+			opts:          []Option[Pattern]{WithDelimiter[Pattern](".")},
 			expectMatch:   true,
 			expectPattern: "api.users",
 		},
@@ -77,7 +77,7 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 			name:          "dot separator with wildcard",
 			patterns:      []string{"api.*", "api.products"},
 			path:          "api.users",
-			opts:          []Option{WithDelimiter(".")},
+			opts:          []Option[Pattern]{WithDelimiter[Pattern](".")},
 			expectMatch:   true,
 			expectPattern: "api.*",
 		},
@@ -85,7 +85,7 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 			name:          "cache enabled - first call",
 			patterns:      []string{"/api/users", "/api/products"},
 			path:          "/api/users",
-			opts:          []Option{WithCache(true)},
+			opts:          []Option[Pattern]{WithCache[Pattern](true)},
 			expectMatch:   true,
 			expectPattern: "/api/users",
 		},
@@ -93,7 +93,7 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 			name:          "cache enabled - non matching",
 			patterns:      []string{"/api/users", "/api/products"},
 			path:          "/api/orders",
-			opts:          []Option{WithCache(true)},
+			opts:          []Option[Pattern]{WithCache[Pattern](true)},
 			expectMatch:   false,
 			expectPattern: "",
 		},
@@ -165,7 +165,7 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 
 func TestMatcherMatch_CacheBehavior(t *testing.T) {
 	patterns := []string{"/api/users", "/static/**"}
-	matcher := NewMatch(patterns, WithCache(true))
+	matcher := NewMatch(patterns, WithCache[Pattern](true))
 
 	// First call should not use cache
 	match, pattern := matcher.Match("/api/users")
@@ -252,7 +252,7 @@ func TestMatcherMatch_EdgeCases(t *testing.T) {
 // TestMatcherMatch_CodePaths tests specific code paths in the Match function
 func TestMatcherMatch_CodePaths(t *testing.T) {
 	t.Run("cache path enabled", func(t *testing.T) {
-		matcher := NewMatch([]string{"/api/users"}, WithCache(true))
+		matcher := NewMatch([]string{"/api/users"}, WithCache[Pattern](true))
 
 		// First call - not in cache
 		match, pattern := matcher.Match("/api/users")

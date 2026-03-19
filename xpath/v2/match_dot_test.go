@@ -102,7 +102,7 @@ func TestPathMatch_dot_Match(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMatch([]string{tt.args.reg}, WithDelimiter("."))
+			m := NewMatch([]string{tt.args.reg}, WithDelimiter[Pattern]("."))
 			match, pattern := m.Match(tt.args.path)
 			if tt.want.match != match {
 				t.Errorf("name:%s,expectMatch:%v,actual:%v,pattern:%s,path:%s", tt.name, tt.want.match, match, pattern, tt.args.path)

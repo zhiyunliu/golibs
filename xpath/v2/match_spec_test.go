@@ -38,7 +38,7 @@ func TestPathMatch_spec_Match(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMatch([]string{tt.args.reg}, WithDelimiter(tt.args.spl))
+			m := NewMatch([]string{tt.args.reg}, WithDelimiter[Pattern](tt.args.spl))
 
 			match1, pattern1 := m.Match(tt.args.path)
 			if tt.want.match != match1 {
