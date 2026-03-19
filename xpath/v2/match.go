@@ -8,21 +8,13 @@ import (
 	"github.com/zhiyunliu/golibs/xpath"
 )
 
-type Pattern interface {
-	Pattern() string
-}
-
-type Patterns []Pattern
-
-type StrPattern string
-
-func (p StrPattern) Pattern() string {
-	return string(p)
-}
+type Pattern = xpath.Pattern
+type Patterns = xpath.Patterns
+type StrPattern = xpath.StrPattern
 
 // Match 基于前缀树的匹配器
 type Match struct {
-	patterns  []xpath.Pattern
+	patterns  []Pattern
 	Delimiter string
 	mutex     sync.Mutex
 	cache     *matchCacheWrap
@@ -30,10 +22,10 @@ type Match struct {
 
 type matchCacheWrap struct {
 	enable   bool
-	cacheMap cmap.ConcurrentMap[string, xpath.Pattern]
+	cacheMap cmap.ConcurrentMap[string, Pattern]
 }
 
-func (w *matchCacheWrap) Get(key string) (val xpath.Pattern, ok bool) {
+func (w *matchCacheWrap) Get(key string) (val Pattern, ok bool) {
 	if !w.enable {
 		return
 	}
@@ -41,7 +33,7 @@ func (w *matchCacheWrap) Get(key string) (val xpath.Pattern, ok bool) {
 	return
 }
 
-func (w *matchCacheWrap) SetIfAbsent(key string, val xpath.Pattern) bool {
+func (w *matchCacheWrap) SetIfAbsent(key string, val Pattern) bool {
 	if !w.enable {
 		return false
 	}
@@ -50,20 +42,20 @@ func (w *matchCacheWrap) SetIfAbsent(key string, val xpath.Pattern) bool {
 
 // NewMatcher 创建一个新的匹配器
 func NewMatch(pathList []string, opts ...Option) *Match {
-	patterns := make([]xpath.Pattern, len(pathList))
+	patterns := make([]Pattern, len(pathList))
 	for i := range pathList {
-		patterns[i] = xpath.StrPattern(pathList[i])
+		patterns[i] = StrPattern(pathList[i])
 	}
 	return NewMatcherPatterns(patterns, opts...)
 }
 
 // NewMatcherPatterns 使用Pattern切片创建匹配器
-func NewMatcherPatterns(pathList []xpath.Pattern, opts ...Option) *Match {
+func NewMatcherPatterns(pathList []Pattern, opts ...Option) *Match {
 	m := &Match{
 		patterns:  pathList,
 		Delimiter: "/",
 		cache: &matchCacheWrap{
-			cacheMap: cmap.New[xpath.Pattern](),
+			cacheMap: cmap.New[Pattern](),
 		},
 	}
 
@@ -75,7 +67,7 @@ func NewMatcherPatterns(pathList []xpath.Pattern, opts ...Option) *Match {
 }
 
 // Match 尝试匹配给定的路径
-func (m *Match) Match(path string) (match bool, pattern xpath.Pattern) {
+func (m *Match) Match(path string) (match bool, pattern Pattern) {
 	sep := m.Delimiter
 	cacheKey := ""
 	if m.CanUseCache() {
