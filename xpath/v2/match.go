@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"sort"
 	"strings"
 
 	cmap "github.com/orcaman/concurrent-map/v2"
@@ -60,6 +61,8 @@ func NewMatcherPatterns[T Pattern](pathList []T, opts ...Option[T]) *Match[T] {
 	for _, opt := range opts {
 		opt(m)
 	}
+
+	sort.Sort((SortPatterns[T](m.patterns)))
 
 	return m
 }
