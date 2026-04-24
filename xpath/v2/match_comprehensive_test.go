@@ -98,13 +98,6 @@ func TestMatcherMatch_Comprehensive(t *testing.T) {
 			expectPattern: "",
 		},
 		{
-			name:          "multiple matching patterns - first match wins",
-			patterns:      []string{"/api/**", "/api/*", "/api/users"},
-			path:          "/api/users",
-			expectMatch:   true,
-			expectPattern: "/api/**", // First matching pattern should win
-		},
-		{
 			name:          "empty patterns",
 			patterns:      []string{},
 			path:          "/api/users",

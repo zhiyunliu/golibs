@@ -1,6 +1,9 @@
 package v2
 
 type SortPatterns[T Pattern] []T
+type SortKeyValuer interface {
+	SortKey() string
+}
 
 func (s SortPatterns[T]) Len() int { return len(s) }
 
@@ -14,6 +17,15 @@ func (s SortPatterns[T]) Swap(i, j int) {
 func (s SortPatterns[T]) Less(i, j int) bool {
 	iv := s[i].Pattern()
 	jv := s[j].Pattern()
+	if ivaluer, ok := any(s[i]).(SortKeyValuer); ok {
+		iv = ivaluer.SortKey()
+	}
+	if jvaluer, ok := any(s[j]).(SortKeyValuer); ok {
+		jv = jvaluer.SortKey()
+	}
+
+	// iv := s[i].Pattern()
+	// jv := s[j].Pattern()
 	il := len(iv)
 	jl := len(jv)
 
