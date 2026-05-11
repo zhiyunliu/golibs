@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 
@@ -103,6 +104,13 @@ func (f *zeroWriter) Write(event *xlog.Event) error {
 
 	if len(event.Tags) > 0 {
 		for k, v := range event.Tags {
+			if v == nil ||
+				v == "" {
+				continue
+			}
+			if rv := reflect.ValueOf(v); rv.IsZero() {
+				continue
+			}
 			zevt.Any(k, v)
 		}
 	}
