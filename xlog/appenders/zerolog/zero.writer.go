@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"reflect"
 	"sync"
 	"time"
 
@@ -89,11 +88,12 @@ func (f *zeroWriter) Write(event *xlog.Event) error {
 	}
 
 	if len(event.Tags) > 0 {
-		if cip, ok := event.Tags["cip"]; ok && cip != "" {
-			zevt.Any("cip", cip)
-		}
-		if uid, ok := event.Tags["uid"]; ok && uid != "" {
-			zevt.Any("uid", uid)
+		for k, v := range event.Tags {
+			if v == nil ||
+				v == "" {
+				continue
+			}
+			zevt.Any(k, v)
 		}
 	}
 
@@ -101,19 +101,6 @@ func (f *zeroWriter) Write(event *xlog.Event) error {
 		Str("sid", event.Session).
 		Int32("seq", event.Idx).
 		Msg(event.Content)
-
-	if len(event.Tags) > 0 {
-		for k, v := range event.Tags {
-			if v == nil ||
-				v == "" {
-				continue
-			}
-			if rv := reflect.ValueOf(v); rv.IsZero() {
-				continue
-			}
-			zevt.Any(k, v)
-		}
-	}
 
 	f.lastWrite = time.Now()
 	return nil
