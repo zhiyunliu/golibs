@@ -206,10 +206,16 @@ func simpleMatch(text, pattern string) bool {
 	return true
 }
 
+// CanUseCache 检查是否可以使用缓存
 func (m *Match[T]) CanUseCache() bool {
 	return m.cache.enable
 }
 
 func (m *Match[T]) buildCacheKey(path, sep string) string {
 	return sep + ":" + path
+}
+
+// Count 返回匹配器中模式的数量
+func (m *Match[T]) Count() int {
+	return len(m.patterns)
 }
