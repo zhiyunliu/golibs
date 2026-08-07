@@ -30,7 +30,7 @@ var (
 		"\r", "\\r")
 )
 
-func HttpEncode(writer http.ResponseWriter, event *Event) error {
+func HttpEncode(writer http.ResponseWriter, event SSEEvent) error {
 	header := writer.Header()
 	header["Content-Type"] = []string{ContentType}
 	if _, exist := header["Cache-Control"]; !exist {
@@ -41,7 +41,7 @@ func HttpEncode(writer http.ResponseWriter, event *Event) error {
 	return event.Encode(w)
 }
 
-func Encode(writer io.Writer, event *Event) error {
+func Encode(writer io.Writer, event SSEEvent) error {
 	w := wrapWriter(writer)
 	return event.Encode(w)
 }

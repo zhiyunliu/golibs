@@ -14,7 +14,7 @@ type decoder struct {
 }
 
 func Decode(r io.Reader, opts ...DecoderOption) (<-chan *Event, error) {
-	var dec decoder = decoder{
+	var dec = decoder{
 		unmarshalCallback: DefaultUnmarshalCallback,
 	}
 	for i := range opts {
@@ -50,8 +50,8 @@ func (d *decoder) decode(r io.Reader) (events chan *Event, err error) {
 			close(events)
 		}()
 
-		var dataBuffer *bytes.Buffer = new(bytes.Buffer)
-		var currentEvent *Event = &Event{}
+		var dataBuffer = new(bytes.Buffer)
+		var currentEvent = &Event{}
 		reader := bufio.NewReader(r) // 使用 bufio.NewReader 来读取数据
 		for {
 			// 读取每个事件

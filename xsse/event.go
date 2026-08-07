@@ -8,6 +8,10 @@ import (
 	"strconv"
 )
 
+type SSEEvent interface {
+	Encode(w stringWriter) error
+}
+
 type Event struct {
 	Event string
 	Id    string
@@ -84,4 +88,16 @@ func (e *Event) writeData(w stringWriter) error {
 
 func customMarshal(data any) ([]byte, error) {
 	return data.(encoding.BinaryMarshaler).MarshalBinary()
+}
+
+type HeartbeatEvent struct {
+}
+
+func (e *HeartbeatEvent) Encode(w stringWriter) (err error) {
+	_, err = w.WriteString(":heartbeat\n\n")
+	return
+}
+
+func NewHeartbeatEvent() *HeartbeatEvent {
+	return &HeartbeatEvent{}
 }
