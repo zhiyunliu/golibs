@@ -1,8 +1,14 @@
 package xsse
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"reflect"
+)
+
+var (
+	ErrChanIsEmpty = errors.New("chan is empty")
 )
 
 // EventIdGetter interface
@@ -27,17 +33,23 @@ type ServerSentEvents interface {
 	GetEvent() (evt *Event, ok bool)
 }
 
+// ServerSentEvents interface
+type ServerSentEvent2 interface {
+	GetEventV2() (evt *Event, err error)
+}
+
 // ResultChan is a channel that returns events
 type ResultChan[T any] struct {
+	ctx         context.Context
 	dataChan    chan T
 	idx         int
 	hasIdGetter bool
 }
 
 // NewResultChan creates a new ResultChan
-func NewResultChan[T any](dataChan chan T) *ResultChan[T] {
-
+func NewResultChan[T any](ctx context.Context, dataChan chan T) *ResultChan[T] {
 	return &ResultChan[T]{
+		ctx:         ctx,
 		dataChan:    dataChan,
 		hasIdGetter: checkEventIdGetter[T](),
 	}
@@ -45,37 +57,46 @@ func NewResultChan[T any](dataChan chan T) *ResultChan[T] {
 
 // GetEvent returns the next event from the channel
 func (s *ResultChan[T]) GetEvent() (evt *Event, ok bool) {
-	item, ok := <-s.dataChan
-	if !ok {
+	evt, err := s.GetEventV2()
+	if errors.Is(err, ErrChanIsEmpty) {
+		return evt, false
+	}
+	if err != nil {
 		return nil, false
 	}
-	s.idx++
+	return evt, true
+}
 
-	var id string
-	if s.hasIdGetter {
-		if getter, ok := any(item).(EventIdGetter); ok {
-			id = getter.GetEventId()
+func (s *ResultChan[T]) GetEventV2() (evt *Event, err error) {
+	var (
+		item T
+		ok   bool
+	)
+
+	select {
+	case <-s.ctx.Done():
+		return nil, s.ctx.Err()
+	case item, ok = <-s.dataChan:
+		if !ok {
+			return nil, ErrChanIsEmpty
 		}
-	} else {
-		id = fmt.Sprint(s.idx)
 	}
-
-	return &Event{
-		Id:   id,
-		Data: item,
-	}, ok
+	s.idx++
+	return buildEvent(item, s.hasIdGetter, s.idx), nil
 }
 
 // ResultList is a list that returns events
 type ResultList[T any] struct {
+	ctx         context.Context
 	dataList    []T
 	idx         int
 	hasIdGetter bool
 }
 
 // NewResultList creates a new ResultList
-func NewResultList[T any](dataList ...T) *ResultList[T] {
+func NewResultList[T any](ctx context.Context, dataList ...T) *ResultList[T] {
 	return &ResultList[T]{
+		ctx:         ctx,
 		dataList:    dataList,
 		hasIdGetter: checkEventIdGetter[T](),
 	}
@@ -83,23 +104,44 @@ func NewResultList[T any](dataList ...T) *ResultList[T] {
 
 // GetEvent returns the next event from the datalist
 func (s *ResultList[T]) GetEvent() (evt *Event, ok bool) {
-	if s.idx >= len(s.dataList) {
+	evt, err := s.GetEventV2()
+	if errors.Is(err, ErrChanIsEmpty) {
+		return evt, false
+	}
+	if err != nil {
 		return nil, false
+	}
+	return evt, true
+}
+
+func (s *ResultList[T]) GetEventV2() (evt *Event, err error) {
+	select {
+	case <-s.ctx.Done():
+		return nil, s.ctx.Err()
+	default:
+	}
+
+	if s.idx >= len(s.dataList) {
+		return nil, ErrChanIsEmpty
 	}
 	item := s.dataList[s.idx]
 	s.idx++
 
+	return buildEvent(item, s.hasIdGetter, s.idx), nil
+}
+
+func buildEvent[T any](item T, hasIdGetter bool, idx int) (evt *Event) {
 	var id string
-	if s.hasIdGetter {
+	if hasIdGetter {
 		if getter, ok := any(item).(EventIdGetter); ok {
 			id = getter.GetEventId()
 		}
 	} else {
-		id = fmt.Sprint(s.idx)
+		id = fmt.Sprint(idx)
 	}
 
 	return &Event{
 		Id:   id,
 		Data: item,
-	}, true
+	}
 }
