@@ -91,13 +91,21 @@ func customMarshal(data any) ([]byte, error) {
 }
 
 type HeartbeatEvent struct {
+	heartbeat string
 }
 
 func (e *HeartbeatEvent) Encode(w stringWriter) (err error) {
-	_, err = w.WriteString(":heartbeat\n\n")
+	if len(e.heartbeat) > 0 {
+		_, err = w.WriteString(":" + e.heartbeat + "\n\n")
+		return
+	}
+	_, err = w.WriteString(":hrtb\n\n")
 	return
 }
 
-func NewHeartbeatEvent() *HeartbeatEvent {
-	return &HeartbeatEvent{}
+func NewHeartbeatEvent(heartbeat ...string) *HeartbeatEvent {
+	if len(heartbeat) > 0 {
+		return &HeartbeatEvent{heartbeat: heartbeat[0]}
+	}
+	return &HeartbeatEvent{heartbeat: ""}
 }
