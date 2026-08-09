@@ -3,6 +3,7 @@ package xsse
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -59,12 +60,7 @@ func TestBuildEvent(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			event := buildEvent(test.item, test.hasIDGetter, test.idx)
-			if event.Id != test.wantID {
-				t.Errorf("buildEvent().Id = %q, want %q", event.Id, test.wantID)
-			}
-			if event.Data != test.item {
-				t.Errorf("buildEvent().Data = %#v, want %#v", event.Data, test.item)
-			}
+			assertEvent(t, event, test.wantID, test.item)
 		})
 	}
 }
@@ -233,15 +229,19 @@ func TestResultChanGetEventReturnsFalseOnContextError(t *testing.T) {
 	}
 }
 
-func assertEvent[T comparable](t *testing.T, event *Event, wantID string, wantData T) {
+func assertEvent(t *testing.T, event SSEEvent, wantID string, wantData any) {
 	t.Helper()
 	if event == nil {
 		t.Fatal("event = nil, want non-nil")
 	}
-	if event.Id != wantID {
-		t.Errorf("event.Id = %q, want %q", event.Id, wantID)
+	evt, ok := event.(*Event)
+	if !ok {
+		t.Fatalf("event = %T, want *Event", event)
 	}
-	if event.Data != wantData {
-		t.Errorf("event.Data = %#v, want %#v", event.Data, wantData)
+	if evt.Id != wantID {
+		t.Errorf("event.Id = %q, want %q", evt.Id, wantID)
+	}
+	if !reflect.DeepEqual(evt.Data, wantData) {
+		t.Errorf("event.Data = %#v, want %#v", evt.Data, wantData)
 	}
 }

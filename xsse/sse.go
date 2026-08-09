@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 )
 
 var (
@@ -41,6 +42,7 @@ type ServerSentEvent2 interface {
 // ResultChan is a channel that returns events
 type ResultChan[T any] struct {
 	ctx         context.Context
+	ticker      *time.Ticker
 	dataChan    chan T
 	idx         int
 	hasIdGetter bool
@@ -50,13 +52,14 @@ type ResultChan[T any] struct {
 func NewResultChan[T any](ctx context.Context, dataChan chan T) *ResultChan[T] {
 	return &ResultChan[T]{
 		ctx:         ctx,
+		ticker:      time.NewTicker(HeartbeatInterval),
 		dataChan:    dataChan,
 		hasIdGetter: checkEventIdGetter[T](),
 	}
 }
 
 // GetEvent returns the next event from the channel
-func (s *ResultChan[T]) GetEvent() (evt *Event, ok bool) {
+func (s *ResultChan[T]) GetEvent() (evt SSEEvent, ok bool) {
 	evt, err := s.GetEventV2()
 	if errors.Is(err, ErrChanIsEmpty) {
 		return evt, false
@@ -67,7 +70,7 @@ func (s *ResultChan[T]) GetEvent() (evt *Event, ok bool) {
 	return evt, true
 }
 
-func (s *ResultChan[T]) GetEventV2() (evt *Event, err error) {
+func (s *ResultChan[T]) GetEventV2() (evt SSEEvent, err error) {
 	var (
 		item T
 		ok   bool
@@ -75,11 +78,15 @@ func (s *ResultChan[T]) GetEventV2() (evt *Event, err error) {
 
 	select {
 	case <-s.ctx.Done():
+		s.ticker.Stop()
 		return nil, s.ctx.Err()
 	case item, ok = <-s.dataChan:
 		if !ok {
+			s.ticker.Stop()
 			return nil, ErrChanIsEmpty
 		}
+	case <-s.ticker.C:
+		return GetHeartBeatEvent(), nil
 	}
 	s.idx++
 	return buildEvent(item, s.hasIdGetter, s.idx), nil
@@ -103,7 +110,7 @@ func NewResultList[T any](ctx context.Context, dataList ...T) *ResultList[T] {
 }
 
 // GetEvent returns the next event from the datalist
-func (s *ResultList[T]) GetEvent() (evt *Event, ok bool) {
+func (s *ResultList[T]) GetEvent() (evt SSEEvent, ok bool) {
 	evt, err := s.GetEventV2()
 	if errors.Is(err, ErrChanIsEmpty) {
 		return evt, false
@@ -114,7 +121,7 @@ func (s *ResultList[T]) GetEvent() (evt *Event, ok bool) {
 	return evt, true
 }
 
-func (s *ResultList[T]) GetEventV2() (evt *Event, err error) {
+func (s *ResultList[T]) GetEventV2() (evt SSEEvent, err error) {
 	select {
 	case <-s.ctx.Done():
 		return nil, s.ctx.Err()
@@ -130,7 +137,16 @@ func (s *ResultList[T]) GetEventV2() (evt *Event, err error) {
 	return buildEvent(item, s.hasIdGetter, s.idx), nil
 }
 
-func buildEvent[T any](item T, hasIdGetter bool, idx int) (evt *Event) {
+func buildEvent[T any](item T, hasIdGetter bool, idx int) (evt SSEEvent) {
+	anyItem := any(item)
+
+	if anyItem == nil {
+		return GetHeartBeatEvent()
+	}
+	if evt, ok := anyItem.(SSEEvent); ok {
+		return evt
+	}
+
 	var id string
 	if hasIdGetter {
 		if getter, ok := any(item).(EventIdGetter); ok {

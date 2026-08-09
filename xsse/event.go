@@ -2,14 +2,13 @@ package xsse
 
 import (
 	"encoding"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 )
 
 type SSEEvent interface {
-	Encode(w stringWriter) error
+	Encode(w StringWriter) error
 }
 
 type Event struct {
@@ -20,26 +19,17 @@ type Event struct {
 	Err   error
 }
 
-var (
-	// default marshal callback
-	DefaultMarshalCallback MarshalCallback = json.Marshal
-	// default unmarshal callback
-	DefaultUnmarshalCallback UnmarshalCallback = func(bytes []byte) (data any, err error) {
-		return string(bytes), nil
-	}
-)
-
 type MarshalCallback func(data any) ([]byte, error)
 type UnmarshalCallback func(bytes []byte) (data any, err error)
 
-func (e *Event) Encode(w stringWriter) error {
+func (e *Event) Encode(w StringWriter) error {
 	e.writeId(w)
 	e.writeEvent(w)
 	e.writeRetry(w)
 	return e.writeData(w)
 }
 
-func (e *Event) writeId(w stringWriter) {
+func (e *Event) writeId(w StringWriter) {
 	if len(e.Id) > 0 {
 		_, _ = w.WriteString("id:")
 		_, _ = fieldReplacer.WriteString(w, e.Id)
@@ -47,7 +37,7 @@ func (e *Event) writeId(w stringWriter) {
 	}
 }
 
-func (e *Event) writeEvent(w stringWriter) {
+func (e *Event) writeEvent(w StringWriter) {
 	if len(e.Event) > 0 {
 		_, _ = w.WriteString("event:")
 		_, _ = fieldReplacer.WriteString(w, e.Event)
@@ -55,7 +45,7 @@ func (e *Event) writeEvent(w stringWriter) {
 	}
 }
 
-func (e *Event) writeRetry(w stringWriter) {
+func (e *Event) writeRetry(w StringWriter) {
 	if e.Retry > 0 {
 		_, _ = w.WriteString("retry:")
 		_, _ = w.WriteString(strconv.FormatUint(uint64(e.Retry), 10))
@@ -63,7 +53,7 @@ func (e *Event) writeRetry(w stringWriter) {
 	}
 }
 
-func (e *Event) writeData(w stringWriter) error {
+func (e *Event) writeData(w StringWriter) error {
 	_, _ = w.WriteString("data:")
 
 	dataKind, custom := kindOfData(e.Data)
@@ -94,7 +84,7 @@ type HeartbeatEvent struct {
 	heartbeat string
 }
 
-func (e *HeartbeatEvent) Encode(w stringWriter) (err error) {
+func (e *HeartbeatEvent) Encode(w StringWriter) (err error) {
 	if len(e.heartbeat) > 0 {
 		_, err = w.WriteString(":" + e.heartbeat + "\n\n")
 		return
@@ -103,7 +93,10 @@ func (e *HeartbeatEvent) Encode(w stringWriter) (err error) {
 	return
 }
 
-func NewHeartbeatEvent(heartbeat ...string) *HeartbeatEvent {
+// NewHeartbeatEvent creates a new heartbeat event.
+// If heartbeat is empty, the default heartbeat is used.
+// If heartbeat is not empty, it is used as the heartbeat.
+func defaultHeartbeatEvent(heartbeat ...string) SSEEvent {
 	if len(heartbeat) > 0 {
 		return &HeartbeatEvent{heartbeat: heartbeat[0]}
 	}

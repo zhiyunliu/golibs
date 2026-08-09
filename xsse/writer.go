@@ -2,7 +2,7 @@ package xsse
 
 import "io"
 
-type stringWriter interface {
+type StringWriter interface {
 	io.Writer
 	WriteString(string) (int, error)
 }
@@ -15,8 +15,8 @@ func (w stringWrapper) WriteString(str string) (int, error) {
 	return w.Write([]byte(str))
 }
 
-func wrapWriter(writer io.Writer) stringWriter {
-	if w, ok := writer.(stringWriter); ok {
+func wrapWriter(writer io.Writer) StringWriter {
+	if w, ok := writer.(StringWriter); ok {
 		return w
 	} else {
 		return stringWrapper{Writer: writer}
