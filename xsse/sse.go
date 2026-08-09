@@ -31,12 +31,12 @@ func checkEventIdGetter[T any]() bool {
 
 // ServerSentEvents interface
 type ServerSentEvents interface {
-	GetEvent() (evt *Event, ok bool)
+	GetEvent() (evt SSEEvent, ok bool)
 }
 
 // ServerSentEvents interface
-type ServerSentEvent2 interface {
-	GetEventV2() (evt *Event, err error)
+type ServerSentEventv2 interface {
+	GetEventV2() (evt SSEEvent, err error)
 }
 
 // ResultChan is a channel that returns events
@@ -47,6 +47,11 @@ type ResultChan[T any] struct {
 	idx         int
 	hasIdGetter bool
 }
+
+var (
+	_ ServerSentEvents  = (*ResultChan[any])(nil)
+	_ ServerSentEventv2 = (*ResultChan[any])(nil)
+)
 
 // NewResultChan creates a new ResultChan
 func NewResultChan[T any](ctx context.Context, dataChan chan T) *ResultChan[T] {
@@ -85,6 +90,7 @@ func (s *ResultChan[T]) GetEventV2() (evt SSEEvent, err error) {
 			s.ticker.Stop()
 			return nil, ErrChanIsEmpty
 		}
+		s.ticker.Reset(HeartbeatInterval)
 	case <-s.ticker.C:
 		return GetHeartBeatEvent(), nil
 	}
@@ -99,6 +105,11 @@ type ResultList[T any] struct {
 	idx         int
 	hasIdGetter bool
 }
+
+var (
+	_ ServerSentEvents  = (*ResultList[any])(nil)
+	_ ServerSentEventv2 = (*ResultList[any])(nil)
+)
 
 // NewResultList creates a new ResultList
 func NewResultList[T any](ctx context.Context, dataList ...T) *ResultList[T] {
