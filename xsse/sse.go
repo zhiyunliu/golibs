@@ -42,7 +42,7 @@ type ServerSentEventv2 interface {
 // ResultChan is a channel that returns events
 type ResultChan[T any] struct {
 	ctx         context.Context
-	ticker      *time.Ticker
+	timer       *time.Timer
 	dataChan    chan T
 	idx         int
 	hasIdGetter bool
@@ -57,7 +57,7 @@ var (
 func NewResultChan[T any](ctx context.Context, dataChan chan T) *ResultChan[T] {
 	return &ResultChan[T]{
 		ctx:         ctx,
-		ticker:      time.NewTicker(HeartbeatInterval),
+		timer:       time.NewTimer(HeartbeatInterval),
 		dataChan:    dataChan,
 		hasIdGetter: checkEventIdGetter[T](),
 	}
@@ -83,19 +83,39 @@ func (s *ResultChan[T]) GetEventV2() (evt SSEEvent, err error) {
 
 	select {
 	case <-s.ctx.Done():
-		s.ticker.Stop()
+		stopTimer(s.timer)
 		return nil, s.ctx.Err()
 	case item, ok = <-s.dataChan:
 		if !ok {
-			s.ticker.Stop()
+			stopTimer(s.timer)
 			return nil, ErrChanIsEmpty
 		}
-		s.ticker.Reset(HeartbeatInterval)
-	case <-s.ticker.C:
+		resetTimer(s.timer, HeartbeatInterval)
+	case <-s.timer.C:
+		resetTimer(s.timer, HeartbeatInterval)
 		return GetHeartBeatEvent(), nil
 	}
 	s.idx++
 	return buildEvent(item, s.hasIdGetter, s.idx), nil
+}
+
+func resetTimer(timer *time.Timer, duration time.Duration) {
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+	timer.Reset(duration)
+}
+
+func stopTimer(timer *time.Timer) {
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
 }
 
 // ResultList is a list that returns events

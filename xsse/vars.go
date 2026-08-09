@@ -2,6 +2,7 @@ package xsse
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,7 @@ var (
 
 	// heartBeatEvent is the default heartbeat event.
 	heartBeatEvent SSEEvent
+	heartBeatOnce  sync.Once
 )
 
 var (
@@ -27,9 +29,8 @@ var (
 
 // GetHeartBeatEvent returns the default heartbeat event.
 func GetHeartBeatEvent() SSEEvent {
-	if heartBeatEvent == nil {
+	heartBeatOnce.Do(func() {
 		heartBeatEvent = NewHeartbeatEvent("")
-	}
+	})
 	return heartBeatEvent
 }
-

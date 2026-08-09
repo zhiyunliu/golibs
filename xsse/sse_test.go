@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type sseTestPayload struct {
@@ -183,6 +184,36 @@ func TestResultChanGetEventUsesEventIdGetter(t *testing.T) {
 		t.Fatal("ResultChan.GetEvent() ok = false, want true")
 	}
 	assertEvent(t, event, "chan-id", payload)
+}
+
+func TestResultChanReusesTimerForHeartbeat(t *testing.T) {
+	originalInterval := HeartbeatInterval
+	HeartbeatInterval = time.Millisecond
+	t.Cleanup(func() {
+		HeartbeatInterval = originalInterval
+	})
+
+	dataChan := make(chan string, 1)
+	resultChan := NewResultChan(context.Background(), dataChan)
+	originalTimer := resultChan.timer
+
+	heartbeatEvent, err := resultChan.GetEventV2()
+	if err != nil {
+		t.Fatalf("ResultChan.GetEventV2() heartbeat error = %v, want nil", err)
+	}
+	if heartbeatEvent != GetHeartBeatEvent() {
+		t.Fatalf("ResultChan.GetEventV2() heartbeat = %#v, want %#v", heartbeatEvent, GetHeartBeatEvent())
+	}
+	if resultChan.timer != originalTimer {
+		t.Fatalf("ResultChan timer = %p, want reused timer %p", resultChan.timer, originalTimer)
+	}
+
+	dataChan <- "next"
+	dataEvent, err := resultChan.GetEventV2()
+	if err != nil {
+		t.Fatalf("ResultChan.GetEventV2() data error = %v, want nil", err)
+	}
+	assertEvent(t, dataEvent, "1", "next")
 }
 
 func TestResultChanGetEventReturnsFalseWhenClosed(t *testing.T) {
