@@ -16,8 +16,14 @@ var (
 type EventIdGetter interface {
 	GetEventId() string
 }
+type EventTypeGetter interface {
+	GetEventType() string
+}
 
-var eventIdGetterType = reflect.TypeOf((*EventIdGetter)(nil)).Elem()
+var (
+	eventIdGetterType   = reflect.TypeOf((*EventIdGetter)(nil)).Elem()
+	eventTypeGetterType = reflect.TypeOf((*EventTypeGetter)(nil)).Elem()
+)
 
 // needCheckEventIdGetter 判定类型 T 是否可能实现 EventIdGetter。
 // T 为接口类型时，实际类型只能在运行时确定，需逐个元素断言。
@@ -27,6 +33,16 @@ func checkEventIdGetter[T any]() bool {
 		return true
 	}
 	return typ.Implements(eventIdGetterType)
+}
+
+// needCheckEventIdGetter 判定类型 T 是否可能实现 EventIdGetter。
+// T 为接口类型时，实际类型只能在运行时确定，需逐个元素断言。
+func checkEventTypeGetter[T any]() bool {
+	typ := reflect.TypeFor[T]()
+	if typ.Kind() == reflect.Interface {
+		return true
+	}
+	return typ.Implements(eventTypeGetterType)
 }
 
 // ServerSentEvents interface
@@ -41,11 +57,12 @@ type ServerSentEventv2 interface {
 
 // ResultChan is a channel that returns events
 type ResultChan[T any] struct {
-	ctx         context.Context
-	timer       *time.Timer
-	dataChan    chan T
-	idx         int
-	hasIdGetter bool
+	ctx           context.Context
+	timer         *time.Timer
+	dataChan      chan T
+	idx           int
+	hasIdGetter   bool
+	hasTypeGetter bool
 }
 
 var (
@@ -56,10 +73,11 @@ var (
 // NewResultChan creates a new ResultChan
 func NewResultChan[T any](ctx context.Context, dataChan chan T) *ResultChan[T] {
 	return &ResultChan[T]{
-		ctx:         ctx,
-		timer:       time.NewTimer(HeartbeatInterval),
-		dataChan:    dataChan,
-		hasIdGetter: checkEventIdGetter[T](),
+		ctx:           ctx,
+		timer:         time.NewTimer(HeartbeatInterval),
+		dataChan:      dataChan,
+		hasIdGetter:   checkEventIdGetter[T](),
+		hasTypeGetter: checkEventTypeGetter[T](),
 	}
 }
 
@@ -96,7 +114,7 @@ func (s *ResultChan[T]) GetEventV2() (evt SSEEvent, err error) {
 		return GetHeartBeatEvent(), nil
 	}
 	s.idx++
-	return buildEvent(item, s.hasIdGetter, s.idx), nil
+	return buildEvent(item, s.hasIdGetter, s.hasTypeGetter, s.idx), nil
 }
 
 func resetTimer(timer *time.Timer, duration time.Duration) {
@@ -120,10 +138,11 @@ func stopTimer(timer *time.Timer) {
 
 // ResultList is a list that returns events
 type ResultList[T any] struct {
-	ctx         context.Context
-	dataList    []T
-	idx         int
-	hasIdGetter bool
+	ctx           context.Context
+	dataList      []T
+	idx           int
+	hasIdGetter   bool
+	hasTypeGetter bool
 }
 
 var (
@@ -134,9 +153,10 @@ var (
 // NewResultList creates a new ResultList
 func NewResultList[T any](ctx context.Context, dataList ...T) *ResultList[T] {
 	return &ResultList[T]{
-		ctx:         ctx,
-		dataList:    dataList,
-		hasIdGetter: checkEventIdGetter[T](),
+		ctx:           ctx,
+		dataList:      dataList,
+		hasIdGetter:   checkEventIdGetter[T](),
+		hasTypeGetter: checkEventTypeGetter[T](),
 	}
 }
 
@@ -165,10 +185,10 @@ func (s *ResultList[T]) GetEventV2() (evt SSEEvent, err error) {
 	item := s.dataList[s.idx]
 	s.idx++
 
-	return buildEvent(item, s.hasIdGetter, s.idx), nil
+	return buildEvent(item, s.hasIdGetter, s.hasTypeGetter, s.idx), nil
 }
 
-func buildEvent[T any](item T, hasIdGetter bool, idx int) (evt SSEEvent) {
+func buildEvent[T any](item T, hasIdGetter bool, hasTypeGetter bool, idx int) (evt SSEEvent) {
 	anyItem := any(item)
 
 	if anyItem == nil {
@@ -187,8 +207,16 @@ func buildEvent[T any](item T, hasIdGetter bool, idx int) (evt SSEEvent) {
 		id = fmt.Sprint(idx)
 	}
 
+	var eventType string
+	if hasTypeGetter {
+		if getter, ok := any(item).(EventTypeGetter); ok {
+			eventType = getter.GetEventType()
+		}
+	}
+
 	return &Event{
-		Id:   id,
-		Data: item,
+		Event: eventType,
+		Id:    id,
+		Data:  item,
 	}
 }

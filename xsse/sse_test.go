@@ -46,11 +46,12 @@ func TestBuildEvent(t *testing.T) {
 	payload := sseTestPayload{ID: "payload-1", Value: "hello"}
 
 	tests := []struct {
-		name        string
-		item        any
-		hasIDGetter bool
-		idx         int
-		wantID      string
+		name          string
+		item          any
+		hasIDGetter   bool
+		hasTypeGetter bool
+		idx           int
+		wantID        string
 	}{
 		{name: "uses item event id when getter is enabled", item: payload, hasIDGetter: true, idx: 9, wantID: "payload-1"},
 		{name: "uses index when getter is disabled", item: payload, hasIDGetter: false, idx: 9, wantID: "9"},
@@ -60,7 +61,7 @@ func TestBuildEvent(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			event := buildEvent(test.item, test.hasIDGetter, test.idx)
+			event := buildEvent(test.item, test.hasIDGetter, test.hasTypeGetter, test.idx)
 			assertEvent(t, event, test.wantID, test.item)
 		})
 	}
