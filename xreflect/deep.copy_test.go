@@ -29,7 +29,7 @@ func TestDeepCopyIsolatesNestedValues(t *testing.T) {
 		Array: [2]*deepCopyTestItem{{Name: "array-value", Tags: []string{"array-tag"}}},
 	}
 
-	copied := deepCopy(original)
+	copied := DeepCopy(original)
 	copied.Item.Name = "changed"
 	copied.Item.Tags[0] = "changed"
 	copied.Items[0].Tags[0] = "changed"
@@ -61,18 +61,18 @@ func TestDeepCopyIsolatesNestedValues(t *testing.T) {
 
 func TestDeepCopyPreservesNilValues(t *testing.T) {
 	var original *deepCopyTestContainer
-	if copied := deepCopy(original); copied != nil {
+	if copied := DeepCopy(original); copied != nil {
 		t.Fatalf("nil 指针深拷贝结果应为 nil，得到 %+v", copied)
 	}
 
 	originalMap := map[string]*deepCopyTestItem(nil)
-	copiedMap := deepCopy(originalMap)
+	copiedMap := DeepCopy(originalMap)
 	if copiedMap != nil {
 		t.Fatalf("nil map 深拷贝结果应为 nil，得到 %+v", copiedMap)
 	}
 
 	var originalSlice []deepCopyTestItem
-	copiedSlice := deepCopy(originalSlice)
+	copiedSlice := DeepCopy(originalSlice)
 	if copiedSlice != nil {
 		t.Fatalf("nil 切片深拷贝结果应为 nil，得到 %+v", copiedSlice)
 	}

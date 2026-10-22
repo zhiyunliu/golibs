@@ -2,7 +2,8 @@ package xreflect
 
 import "reflect"
 
-func deepCopy[T any](original T) T {
+// DeepCopy returns a deep copy of the given value.
+func DeepCopy[T any](original T) T {
 	value := deepCopyValue(reflect.ValueOf(original))
 	if !value.IsValid() {
 		var zero T
