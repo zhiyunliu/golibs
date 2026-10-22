@@ -184,7 +184,7 @@ func TestHeartbeatEventEncode(t *testing.T) {
 }
 
 func TestBuildEventReturnsHeartbeatForNilItem(t *testing.T) {
-	event := buildEvent[any](nil, false, 1)
+	event := buildEvent[any](nil, false, false, 1)
 
 	var buffer bytes.Buffer
 	err := event.Encode(&buffer)
@@ -200,7 +200,7 @@ func TestBuildEventReturnsHeartbeatForNilItem(t *testing.T) {
 func TestBuildEventReturnsExistingSSEEvent(t *testing.T) {
 	wantEvent := &Event{Id: "custom", Data: "value"}
 
-	gotEvent := buildEvent[SSEEvent](wantEvent, false, 1)
+	gotEvent := buildEvent[SSEEvent](wantEvent, false, false, 1)
 
 	if gotEvent != wantEvent {
 		t.Fatalf("buildEvent() = %#v, want same event %#v", gotEvent, wantEvent)
