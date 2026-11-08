@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
+	"io"
 	"testing"
 )
 
@@ -134,5 +136,66 @@ func TestZipDecompressWithoutFiles(t *testing.T) {
 
 	if _, err := ZipDecompress(buf.Bytes()); err == nil {
 		t.Fatal("ZipDecompress() error = nil, want non-nil")
+	}
+}
+
+func TestCompressFormats(t *testing.T) {
+	want := []byte("hello, formats\x00\xff")
+
+	for _, format := range []Format{FormatZIP, FormatZlib} {
+		compressed, err := Compress(want, format)
+		if err != nil {
+			t.Fatalf("Compress(%d) error = %v", format, err)
+		}
+
+		switch format {
+		case FormatZIP:
+			archive, err := zip.NewReader(bytes.NewReader(compressed), int64(len(compressed)))
+			if err != nil || len(archive.File) != 1 || archive.File[0].Name != "location" {
+				t.Fatalf("invalid ZIP archive: files = %v, error = %v", archive, err)
+			}
+		case FormatZlib:
+			reader, err := zlib.NewReader(bytes.NewReader(compressed))
+			if err != nil {
+				t.Fatalf("zlib.NewReader() error = %v", err)
+			}
+			decoded, readErr := io.ReadAll(reader)
+			closeErr := reader.Close()
+			if readErr != nil || closeErr != nil || !bytes.Equal(decoded, want) {
+				t.Fatalf("zlib stream: decoded = %v, read error = %v, close error = %v", decoded, readErr, closeErr)
+			}
+		}
+
+		got, err := Decompress(compressed, format)
+		if err != nil || !bytes.Equal(got, want) {
+			t.Fatalf("Decompress(%d) = %v, %v; want %v", format, got, err, want)
+		}
+	}
+}
+
+func TestCompressLevelZlib(t *testing.T) {
+	want := []byte("compressed with level")
+	compressed, err := CompressLevel(want, FormatZlib, BestCompression)
+	if err != nil {
+		t.Fatalf("CompressLevel() error = %v", err)
+	}
+	got, err := Decompress(compressed, FormatZlib)
+	if err != nil || !bytes.Equal(got, want) {
+		t.Fatalf("Decompress() = %v, %v; want %v", got, err, want)
+	}
+	if _, err := CompressLevel(want, FormatZlib, 10); err == nil {
+		t.Fatal("CompressLevel() accepted invalid level")
+	}
+}
+
+func TestInvalidFormat(t *testing.T) {
+	if _, err := Compress([]byte("hello"), Format(99)); err == nil {
+		t.Fatal("Compress() accepted invalid format")
+	}
+	if _, err := Decompress([]byte("hello"), Format(99)); err == nil {
+		t.Fatal("Decompress() accepted invalid format")
+	}
+	if _, err := Decompress([]byte("not a zlib stream"), FormatZlib); err == nil {
+		t.Fatal("Decompress() accepted invalid zlib stream")
 	}
 }
