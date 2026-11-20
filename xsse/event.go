@@ -31,30 +31,30 @@ func (e *Event) Encode(w StringWriter) error {
 
 func (e *Event) writeId(w StringWriter) {
 	if len(e.Id) > 0 {
-		_, _ = w.WriteString("id:")
+		_, _ = w.Write([]byte("id:"))
 		_, _ = fieldReplacer.WriteString(w, e.Id)
-		_, _ = w.WriteString("\n")
+		_, _ = w.Write([]byte("\n"))
 	}
 }
 
 func (e *Event) writeEvent(w StringWriter) {
 	if len(e.Event) > 0 {
-		_, _ = w.WriteString("event:")
+		_, _ = w.Write([]byte("event:"))
 		_, _ = fieldReplacer.WriteString(w, e.Event)
-		_, _ = w.WriteString("\n")
+		_, _ = w.Write([]byte("\n"))
 	}
 }
 
 func (e *Event) writeRetry(w StringWriter) {
 	if e.Retry > 0 {
-		_, _ = w.WriteString("retry:")
-		_, _ = w.WriteString(strconv.FormatUint(uint64(e.Retry), 10))
-		_, _ = w.WriteString("\n")
+		_, _ = w.Write([]byte("retry:"))
+		_, _ = w.Write([]byte(strconv.FormatUint(uint64(e.Retry), 10)))
+		_, _ = w.Write([]byte("\n"))
 	}
 }
 
 func (e *Event) writeData(w StringWriter) error {
-	_, _ = w.WriteString("data:")
+	_, _ = w.Write([]byte("data:"))
 
 	dataKind, custom := kindOfData(e.Data)
 	switch dataKind {
@@ -68,10 +68,10 @@ func (e *Event) writeData(w StringWriter) error {
 			return err
 		}
 		_, _ = w.Write(databytes)
-		_, _ = w.WriteString("\n\n")
+		_, _ = w.Write([]byte("\n\n"))
 	default:
 		_, _ = dataReplacer.WriteString(w, fmt.Sprint(e.Data))
-		_, _ = w.WriteString("\n\n")
+		_, _ = w.Write([]byte("\n\n"))
 	}
 	return nil
 }
@@ -86,10 +86,10 @@ type HeartbeatEvent struct {
 
 func (e *HeartbeatEvent) Encode(w StringWriter) (err error) {
 	if len(e.heartbeat) > 0 {
-		_, err = w.WriteString(":" + e.heartbeat + "\n\n")
+		_, err = w.Write([]byte(":" + e.heartbeat + "\n\n"))
 		return
 	}
-	_, err = w.WriteString(":hrtb\n\n")
+	_, err = w.Write([]byte(":hrtb\n\n"))
 	return
 }
 

@@ -36,14 +36,11 @@ func HttpEncode(writer http.ResponseWriter, event SSEEvent) error {
 	if _, exist := header["Cache-Control"]; !exist {
 		header["Cache-Control"] = []string{NoCache}
 	}
-
-	w := wrapWriter(writer)
-	return event.Encode(w)
+	return event.Encode(writer)
 }
 
 func Encode(writer io.Writer, event SSEEvent) error {
-	w := wrapWriter(writer)
-	return event.Encode(w)
+	return event.Encode(writer)
 }
 
 var (
